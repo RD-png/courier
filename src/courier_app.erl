@@ -6,8 +6,8 @@
 %%% @end
 %%% Created :  5 Oct 2022 by Ryan User <ryan@nixos-desktop>
 %%%-------------------------------------------------------------------
-
 -module(courier_app).
+-author("ryandenby").
 
 -behaviour(application).
 
@@ -29,7 +29,7 @@ start(_StartType, _StartArgs) ->
 stop(_State) ->
   ok.
 
-%% @doc Return value bound to key in app environemnt, `Key' is expected
+%% @doc Return value bound to `Key' in app environemnt, `Key' is expected
 %%      to be set, so we will throw an error otherwise.
 -spec get_env(Key) -> Value | no_return() when
   Key   :: term(),
@@ -42,8 +42,8 @@ get_env(Key) when is_atom(Key) ->
       throw({env_missing_key, Key})
   end.
 
-%% @doc Return value bound to key in app environemnt, `Key' maybe not be
-%%      set so return the passed `Default' otherwise.
+%% @doc Return value bound to `Key' in app environemnt, `Key' maybe not
+%%      be set so return the passed `Default' otherwise.
 -spec get_env_or_default(Key, Default) -> Value when
   Key     :: term(),
   Default :: term(),

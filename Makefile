@@ -6,3 +6,6 @@ compile:
 
 dev:
 	ERL_FLAGS=" -args_file config/vm.args " ${REBAR} shell
+
+dialyzer:
+	${REBAR} dialyzer

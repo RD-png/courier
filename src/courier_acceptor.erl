@@ -10,26 +10,39 @@
 -author("ryandenby").
 
 %% API
--export([start_link/0,
-         get_spec/0]).
+-export([start_link/1,
+         get_spec/2]).
+
+-export([init/1]).
 
 %%%-------------------------------------------------------------------
 %%% API
 %%%-------------------------------------------------------------------
 
-start_link() ->
-  init().
+start_link(ListenSocket) ->
+  Pid = spawn_link(?MODULE, init, [ListenSocket]),
+  {ok, Pid}.
 
-get_spec() ->
-  #{id       => ?MODULE,
-    start    => {?MODULE, start_link, []},
+init(ListenSocket) ->
+  loop(ListenSocket).
+
+get_spec(Id, ListenSocket) ->
+  #{id       => {Id, ?MODULE},
+    start    => {?MODULE, start_link, [ListenSocket]},
     restart  => permanent,
-    shutdown => 5000,
+    shutdown => brutal_kill,
     type     => worker,
     modules  => [?MODULE]}.
 
-init() ->
-  receive
-    {ok} ->
-      ok
+%%%-------------------------------------------------------------------
+%%% Internal functions
+%%%-------------------------------------------------------------------
+
+loop(ListenSocket) ->
+  case gen_tcp:accept(ListenSocket) of
+    {ok, Socket} ->
+      lager:info("courier: accepted connection on: ~p", [Socket]),
+      ok;
+    {error, Reason} ->
+      lager:debug("courier: acceptor failed with reason: ~p", [Reason])
   end.

@@ -12,11 +12,11 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0]).
+-export([start_link/1]).
 
 %% Supervisor callbacks
 -export([init/1,
-         get_spec/0]).
+         get_spec/2]).
 
 -define(SERVER, ?MODULE).
 
@@ -24,12 +24,12 @@
 %% API
 %%%-------------------------------------------------------------------
 
-start_link() ->
-  supervisor:start_link({local, ?SERVER}, ?MODULE, []).
+start_link(ListenOpts) ->
+  supervisor:start_link({local, ?SERVER}, ?MODULE, [ListenOpts]).
 
-get_spec() ->
-  #{id       => ?MODULE,
-    start    => {?MODULE, start_link, []},
+get_spec(PortRef, ListenOpts) ->
+  #{id       => {PortRef, ?MODULE},
+    start    => {?MODULE, start_link, [ListenOpts]},
     restart  => permanent,
     shutdown => 5000,
     type     => supervisor,
@@ -39,14 +39,24 @@ get_spec() ->
 %% Supervisor callbacks
 %%%-------------------------------------------------------------------
 
-init([]) ->
-  SupFlags   = #{strategy  => simple_one_for_one,
-                 intensity => 1,
+init([ListenOpts]) ->
+  Port         = maps:get(port, ListenOpts),
+  NumListeners = maps:get(num_listeners, ListenOpts),
+
+  SupFlags   = #{strategy  => one_for_one,
+                 intensity => 1 + ceil(math:log2(NumListeners)),
                  period    => 5},
-  ChildSpecs = [courier_acceptor:get_spec()],
+
+  {ok, ListenSocket} = listen_port(Port),
+
+  ChildSpecs = [courier_acceptor:get_spec(Id, ListenSocket)
+                || Id <- lists:seq(1, NumListeners)],
 
   {ok, {SupFlags, ChildSpecs}}.
 
 %%%-------------------------------------------------------------------
 %% Internal functions
 %%%-------------------------------------------------------------------
+
+listen_port(Port) ->
+  gen_tcp:listen(0, [{port, Port}]).

@@ -44,7 +44,7 @@ init([ListenOpts]) ->
   NumListeners = maps:get(num_listeners, ListenOpts),
 
   SupFlags   = #{strategy  => one_for_one,
-                 intensity => 1 + ceil(math:log2(NumListeners)),
+                 intensity => 1,
                  period    => 5},
 
   {ok, ListenSocket} = listen_port(Port),

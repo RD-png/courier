@@ -22,7 +22,7 @@
 
 %% Need to validate the port is valid here ?
 -spec listen(PortRef, ListenOpts) -> supervisor:startchild_ret() when
-  PortRef :: atom(),
+  PortRef    :: atom(),
   ListenOpts :: listen_opts().
 listen(PortRef, ListenOpts) ->
   ChildSpec = courier_acceptor_sup:get_spec(PortRef, ListenOpts),

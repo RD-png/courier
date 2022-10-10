@@ -31,9 +31,7 @@ stop(_State) ->
 
 %% @doc Return value bound to `Key' in app environemnt, `Key' is expected
 %%      to be set, so we will throw an error otherwise.
--spec get_env(Key) -> Value | no_return() when
-  Key   :: term(),
-  Value :: term().
+-spec get_env(Key :: term()) -> Value :: term() | no_return().
 get_env(Key) when is_atom(Key) ->
   case application:get_env(Key) of
     {ok, Val} ->
@@ -44,9 +42,6 @@ get_env(Key) when is_atom(Key) ->
 
 %% @doc Return value bound to `Key' in app environemnt, `Key' maybe not
 %%      be set so return the passed `Default' otherwise.
--spec get_env_or_default(Key, Default) -> Value when
-  Key     :: term(),
-  Default :: term(),
-  Value   :: term().
+-spec get_env_or_default(Key :: term(), Default :: term()) -> Value :: term().
 get_env_or_default(Key, Default) ->
   application:get_env(?APP, Key, Default).

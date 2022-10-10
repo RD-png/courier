@@ -15,6 +15,8 @@
 
 -export([init/1]).
 
+-type id() :: integer().
+
 %%%-------------------------------------------------------------------
 %%% API
 %%%-------------------------------------------------------------------
@@ -26,8 +28,9 @@ start_link(ListenSocket) ->
 init(ListenSocket) ->
   loop(ListenSocket).
 
+-spec get_spec(Id :: id(), ListenSocket :: inet:socket()) -> supervisor:child_spec().
 get_spec(Id, ListenSocket) ->
-  #{id       => {Id, ?MODULE},
+  #{id       => {?MODULE, Id},
     start    => {?MODULE, start_link, [ListenSocket]},
     restart  => permanent,
     shutdown => brutal_kill,

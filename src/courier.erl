@@ -21,12 +21,9 @@
 %%%-------------------------------------------------------------------
 
 %% Need to validate the port is valid here ?
--spec listen(PortRef, ListenOpts) -> supervisor:startchild_ret() when
-  PortRef    :: atom(),
-  ListenOpts :: listen_opts().
+-spec listen(PortRef :: atom(), ListenOpts :: listen_opts()) -> supervisor:startchild_ret().
 listen(PortRef, ListenOpts) ->
-  ChildSpec = courier_acceptor_sup:get_spec(PortRef, ListenOpts),
-  supervisor:start_child(courier_sup, ChildSpec).
+  courier_acceptor_sup:start_pool(PortRef, ListenOpts).
 
 %%%-------------------------------------------------------------------
 %%% Internal functions

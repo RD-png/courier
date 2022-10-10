@@ -31,9 +31,9 @@ start_link() ->
 %%%-------------------------------------------------------------------
 
 init([]) ->
-  SupFlags   = #{strategy  => one_for_all,
+  SupFlags   = #{strategy  => one_for_one,
                  intensity => 1,
                  period    => 5},
-  ChildSpecs = [],
+  ChildSpecs = [courier_acceptor_sup:get_spec()],
 
   {ok, {SupFlags, ChildSpecs}}.

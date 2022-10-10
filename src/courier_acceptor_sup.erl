@@ -1,8 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% @author Ryan User <ryan@nixos-desktop>
 %%% @copyright (C) 2022, Ryan User
-%%% @doc  Supervisor for dynamically spawned `courier_acceptor_pool_sup'
-%%%       supervisors.
+%%% @doc  Supervisor for `courier_acceptor_pool_sup' supervisors.
 %%% Created :  10 Oct 2022 by Ryan User <ryan@nixos-desktop>
 %%%-------------------------------------------------------------------
 -module(courier_acceptor_sup).

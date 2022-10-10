@@ -2,7 +2,7 @@
 %%% @author Ryan User <ryan@nixos-desktop>
 %%% @copyright (C) 2022, Ryan User
 %%% @doc
-%%% Acceptor pool supervisor, spawned dynamically via `courier_acceptor_sup'.
+%%% Acceptor pool supervisor, spawned via `courier_acceptor_sup'.
 %%% @end
 %%% Created :  10 Oct 2022 by Ryan User <ryan@nixos-desktop>
 %%%-------------------------------------------------------------------

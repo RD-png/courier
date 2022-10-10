@@ -43,12 +43,11 @@ get_spec() ->
 init([_PortRef, ListenOpts]) ->
   Port         = maps:get(port, ListenOpts),
   NumListeners = maps:get(num_listeners, ListenOpts),
+  {ok, ListenSocket} = listen_port(Port),
 
   SupFlags   = #{strategy  => one_for_one,
                  intensity => 1,
                  period    => 5},
-
-  {ok, ListenSocket} = listen_port(Port),
   ChildSpecs = [courier_acceptor:get_spec(Id, ListenSocket)
                 || Id <- lists:seq(1, NumListeners)],
 

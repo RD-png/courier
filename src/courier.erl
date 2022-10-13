@@ -10,25 +10,11 @@
 -author("ryandenby").
 
 %% API
--export([listen/2,
-         close/1]).
-
--export_type([listen_opts/0]).
--type listen_opts() :: #{port          => port(),
-                         num_listeners => pos_integer()}.
+-export([]).
 
 %%%-------------------------------------------------------------------
 %%% API
 %%%-------------------------------------------------------------------
-
--spec listen(PortRef :: atom(), ListenOpts :: listen_opts()) ->
-        supervisor:startchild_ret().
-listen(PortRef, ListenOpts) ->
-  courier_acceptor_sup:start_pool(PortRef, ListenOpts).
-
--spec close(PortRef :: atom()) -> ok | {error, not_found | simple_one_for_one}.
-close(PortRef) ->
-  courier_acceptor_sup:close_pool(PortRef).
 
 %%%-------------------------------------------------------------------
 %%% Internal functions

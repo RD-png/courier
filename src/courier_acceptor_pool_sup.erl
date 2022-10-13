@@ -24,14 +24,14 @@
 %% API
 %%%-------------------------------------------------------------------
 
-start_link(PortRef, ListenOpts) ->
-  supervisor:start_link({local, ?pool_sup_name(PortRef)}, ?MODULE, [PortRef, ListenOpts]).
+start_link(PoolRef, ListenOpts) ->
+  supervisor:start_link({local, ?pool_sup_name(PoolRef)}, ?MODULE, [PoolRef, ListenOpts]).
 
--spec get_spec(PortRef :: atom(), ListenOpts :: courier:listen_opts()) ->
+-spec get_spec(PoolRef :: atom(), ListenOpts :: courier:listen_opts()) ->
         supervisor:child_spec().
-get_spec(PortRef, ListenOpts) ->
-  #{id       => {?MODULE, PortRef},
-    start    => {?MODULE, start_link, [PortRef, ListenOpts]},
+get_spec(PoolRef, ListenOpts) ->
+  #{id       => {?MODULE, PoolRef},
+    start    => {?MODULE, start_link, [PoolRef, ListenOpts]},
     restart  => permanent,
     shutdown => 5000,
     type     => supervisor,
@@ -41,7 +41,7 @@ get_spec(PortRef, ListenOpts) ->
 %% Supervisor callbacks
 %%%-------------------------------------------------------------------
 
-init([_PortRef, ListenOpts]) ->
+init([_PoolRef, ListenOpts]) ->
   Port         = maps:get(port, ListenOpts),
   NumListeners = maps:get(num_listeners, ListenOpts),
   {ok, ListenSocket} = listen_port(Port),

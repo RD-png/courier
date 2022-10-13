@@ -25,7 +25,9 @@
 %%%-------------------------------------------------------------------
 
 start_link(PoolRef, ListenOpts) ->
-  supervisor:start_link({local, ?pool_sup_name(PoolRef)}, ?MODULE, [PoolRef, ListenOpts]).
+  supervisor:start_link({local, ?pool_sup_name(PoolRef)},
+                        ?MODULE,
+                        [PoolRef, ListenOpts]).
 
 -spec get_spec(PoolRef :: atom(), ListenOpts :: courier:listen_opts()) ->
         supervisor:child_spec().

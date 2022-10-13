@@ -28,7 +28,8 @@ start_link(ListenSocket) ->
 init(ListenSocket) ->
   loop(ListenSocket).
 
--spec get_spec(Id :: id(), ListenSocket :: inet:socket()) -> supervisor:child_spec().
+-spec get_spec(Id :: id(), ListenSocket :: inet:socket()) ->
+        supervisor:child_spec().
 get_spec(Id, ListenSocket) ->
   #{id       => {?MODULE, Id},
     start    => {?MODULE, start_link, [ListenSocket]},

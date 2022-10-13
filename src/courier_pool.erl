@@ -38,7 +38,7 @@ start(PortRef, ListenOpts) ->
                  [Child, Port]),
       Res;
      {error, Reason} = Err ->
-      lager:error("Listener pool '~p', failed to start listening on port ~p,
+      lager:warning("Listener pool '~p', failed to start listening on port ~p,
  with error: ~p", [Port, Reason]),
       Err
   end.
@@ -53,8 +53,8 @@ stop(PortRef) ->
       lager:info("Listener pool '~p' closed", [PortRef]),
       {ok, PortRef};
     {error, Reason} = Err ->
-      lager:error("Listener pool '~p', failed to close with error: ~p",
-                  [PortRef, Reason]),
+      lager:warning("Listener pool '~p', failed to close with error: ~p",
+                    [PortRef, Reason]),
       Err
   end.
 

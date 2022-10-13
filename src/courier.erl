@@ -10,7 +10,8 @@
 -author("ryandenby").
 
 %% API
--export([listen/2]).
+-export([listen/2,
+         close/1]).
 
 -export_type([listen_opts/0]).
 -type listen_opts() :: #{port          => port(),
@@ -20,10 +21,14 @@
 %%% API
 %%%-------------------------------------------------------------------
 
-%% Need to validate the port is valid here ?
--spec listen(PortRef :: atom(), ListenOpts :: listen_opts()) -> supervisor:startchild_ret().
+-spec listen(PortRef :: atom(), ListenOpts :: listen_opts()) ->
+        supervisor:startchild_ret().
 listen(PortRef, ListenOpts) ->
   courier_acceptor_sup:start_pool(PortRef, ListenOpts).
+
+-spec close(PortRef :: atom()) -> ok | {error, not_found | simple_one_for_one}.
+close(PortRef) ->
+  courier_acceptor_sup:close_pool(PortRef).
 
 %%%-------------------------------------------------------------------
 %%% Internal functions

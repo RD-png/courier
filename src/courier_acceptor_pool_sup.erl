@@ -13,7 +13,7 @@
 
 %% API
 -export([start_link/2,
-         get_spec/0]).
+         get_spec/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -27,10 +27,11 @@
 start_link(PortRef, ListenOpts) ->
   supervisor:start_link({local, ?pool_sup_name(PortRef)}, ?MODULE, [PortRef, ListenOpts]).
 
--spec get_spec() -> supervisor:child_spec().
-get_spec() ->
-  #{id       => ?MODULE,
-    start    => {?MODULE, start_link, []},
+-spec get_spec(PortRef :: atom(), ListenOpts :: courier:listen_opts()) ->
+        supervisor:child_spec().
+get_spec(PortRef, ListenOpts) ->
+  #{id       => {?MODULE, PortRef},
+    start    => {?MODULE, start_link, [PortRef, ListenOpts]},
     restart  => permanent,
     shutdown => 5000,
     type     => supervisor,

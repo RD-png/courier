@@ -12,7 +12,8 @@
 %% API
 -export([start_link/0,
          get_spec/0,
-         start_pool/2]).
+         start_pool/2,
+         close_pool/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -35,10 +36,12 @@ get_spec() ->
     type     => supervisor,
     modules  => [?MODULE]}.
 
--spec start_pool(PortRef :: atom(), ListenOpts :: courier:listen_opts()) -> supervisor:startchild_ret().
+-spec start_pool(PortRef :: atom(), ListenOpts :: courier:listen_opts()) ->
+        supervisor:startchild_ret().
 start_pool(PortRef, ListenOpts) ->
   Port = maps:get(port, ListenOpts),
-  case supervisor:start_child(?MODULE, [PortRef, ListenOpts]) of
+  PoolSpec = courier_acceptor_pool_sup:get_spec(PortRef, ListenOpts),
+  case supervisor:start_child(?MODULE, PoolSpec) of
     {ok, Child} = Res ->
       lager:info("Listener pool started at ~p, listening on port ~p", [Child, Port]),
       Res;
@@ -47,14 +50,19 @@ start_pool(PortRef, ListenOpts) ->
       Err
   end.
 
+-spec close_pool(PortRef :: atom()) ->
+        ok | {error, Reason :: not_found | simple_one_for_one}.
+close_pool(PortRef) ->
+  supervisor:terminate_child(courier_acceptor_sup, {courier_acceptor_pool_sup, PortRef}).
+
 %%%-------------------------------------------------------------------
 %% Supervisor callbacks
 %%%-------------------------------------------------------------------
 
 init([]) ->
-  SupFlags   = #{strategy  => simple_one_for_one,
+  SupFlags   = #{strategy  => one_for_one,
                  intensity => 0,
                  period    => 1},
-  ChildSpecs = [courier_acceptor_pool_sup:get_spec()],
+  ChildSpecs = [],
 
   {ok, {SupFlags, ChildSpecs}}.

@@ -34,6 +34,7 @@ init([]) ->
   SupFlags   = #{strategy  => one_for_one,
                  intensity => 1,
                  period    => 5},
-  ChildSpecs = [courier_acceptor_sup:get_spec()],
+  ChildSpecs = [courier_acceptor_sup:get_spec(),
+                courier_connection_sup:get_spec()],
 
   {ok, {SupFlags, ChildSpecs}}.

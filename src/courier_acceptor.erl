@@ -13,7 +13,8 @@
 -export([start_link/1,
          get_spec/2]).
 
--export([init/1]).
+-export([init/1,
+         accept/1]).
 
 -type id() :: integer().
 
@@ -26,7 +27,8 @@ start_link(ListenSocket) ->
   {ok, Pid}.
 
 init(ListenSocket) ->
-  loop(ListenSocket).
+  accept(ListenSocket),
+  ok.
 
 -spec get_spec(Id :: id(), ListenSocket :: inet:socket()) ->
         supervisor:child_spec().
@@ -42,11 +44,15 @@ get_spec(Id, ListenSocket) ->
 %%% Internal functions
 %%%-------------------------------------------------------------------
 
-loop(ListenSocket) ->
+accept(ListenSocket) ->
   case gen_tcp:accept(ListenSocket) of
     {ok, Socket} ->
       lager:info("courier: accepted connection on: ~p", [Socket]),
-      ok;
+      {ok, ConnectionPid} = courier_connection_sup:create_connection(Socket),
+      ok = gen_tcp:controlling_process(Socket, ConnectionPid),
+      ConnectionPid ! connected,
+      accept(ListenSocket);
     {error, Reason} ->
-      lager:debug("courier: acceptor failed with reason: ~p", [Reason])
+      lager:debug("courier: acceptor failed with reason: ~p", [Reason]),
+      accept(ListenSocket)
   end.

@@ -13,8 +13,7 @@
 -export([start_link/1,
          get_spec/2]).
 
--export([init/1,
-         accept/1]).
+-export([init/1]).
 
 -type id() :: integer().
 

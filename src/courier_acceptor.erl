@@ -21,13 +21,14 @@
 %%% API
 %%%-------------------------------------------------------------------
 
+-spec start_link(ListenSocket :: inet:socket()) -> {ok, Pid :: pid()}.
 start_link(ListenSocket) ->
   Pid = spawn_link(?MODULE, init, [ListenSocket]),
   {ok, Pid}.
 
+-spec init(ListenSocket :: inet:socket()) -> no_return().
 init(ListenSocket) ->
-  accept(ListenSocket),
-  ok.
+  accept(ListenSocket).
 
 -spec get_spec(Id :: id(), ListenSocket :: inet:socket()) ->
         supervisor:child_spec().
@@ -36,7 +37,7 @@ get_spec(Id, ListenSocket) ->
     start    => {?MODULE, start_link, [ListenSocket]},
     restart  => permanent,
     shutdown => brutal_kill,
-    type     => worker,
+     type     => worker,
     modules  => [?MODULE]}.
 
 %%%-------------------------------------------------------------------

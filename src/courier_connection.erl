@@ -21,10 +21,12 @@
 %%% API
 %%%-------------------------------------------------------------------
 
+-spec start_link(Socket :: inet:socket()) -> {ok, Pid :: pid()}.
 start_link(Socket) ->
   Pid = spawn_link(?MODULE, init, [Socket]),
   {ok, Pid}.
 
+-spec init(Socket :: inet:socket()) -> no_return().
 init(Socket) ->
   connect(Socket).
 
@@ -32,7 +34,7 @@ init(Socket) ->
 get_spec() ->
   #{id       => ?MODULE,
     start    => {?MODULE, start_link, []},
-    restart  => permanent,
+    restart  => transient,
     shutdown => 5000,
     type     => worker,
     modules  => [?MODULE]}.
@@ -48,15 +50,22 @@ connect(Socket) ->
       handle(Socket)
   after ?TIMEOUT ->
       lager:error("Connection timeout on socket ~p", [Socket]),
-      ok
+      exit({error, timeout})
   end.
 
 handle(Socket) ->
   receive
-    {tcp, Socket, <<"quit", _/binary>>} ->
-      gen_tcp:close(Socket);
     {tcp, Socket, Msg} ->
       inet:setopts(Socket, [{active, once}]),
       gen_tcp:send(Socket, Msg),
-      handle(Socket)
+      lager:info("recieved ~p", [Msg]),
+      ok;
+    {tcp_closed, Socket} ->
+      lager:info("Connection on socket ~p closed, closing connection",
+                 [Socket]),
+      ok;
+    {tcp_error, Socket, Reason} ->
+      lager:error("Connection closing on socket ~p with error: ~p",
+                  [Socket, Reason]),
+      exit({tcp_error, Reason})
   end.

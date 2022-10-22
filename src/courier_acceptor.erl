@@ -48,14 +48,17 @@ get_spec(Id, ListenSocket) ->
 %%%-------------------------------------------------------------------
 
 accept(ListenSocket) ->
-  case gen_tcp:accept(ListenSocket) of
+  case gen_tcp:accept(ListenSocket, infinity) of
     {ok, Socket} ->
       lager:info("courier: accepted connection on: ~p", [Socket]),
       {ok, ConnPid} = courier_connection_sup:create_connection(Socket),
       ok = gen_tcp:controlling_process(Socket, ConnPid),
-      ConnPid ! connected,
-      accept(ListenSocket);
+      ConnPid ! connected;
+    {error, closed} = Err ->
+      lager:error("Socket ~p has closed, closing acceptor process",
+                  [ListenSocket]),
+      exit(Err);
     {error, Reason} ->
-      lager:debug("courier: acceptor failed with reason: ~p", [Reason]),
-      accept(ListenSocket)
-  end.
+      lager:error("courier: acceptor failed with reason: ~p", [Reason])
+  end,
+  accept(ListenSocket).

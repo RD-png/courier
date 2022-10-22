@@ -16,7 +16,7 @@
 
 -define(ACCEPTOR_SUP, courier_acceptor_sup).
 
--define(child_id(PoolRef), {courier_acceptor_pool_sup, PoolRef}).
+-define(CHILD_ID(PoolRef), {courier_acceptor_pool_sup, PoolRef}).
 
 -export_type([listen_opts/0]).
 -type listen_opts() :: #{port          => port(),
@@ -38,17 +38,17 @@ start(PoolRef, ListenOpts) ->
                  [Child, Port]),
       Res;
      {error, Reason} = Err ->
-      lager:warning("Listener pool '~p', failed to start listening on port ~p,
- with error: ~p", [Port, Reason]),
+      lager:warning("Listener pool '~p', failed to start listening on port
+ ~p, with error: ~p", [Port, Reason]),
       Err
   end.
 
-%% @doc Stop a new listener pool
+%% @doc Stop an existing listener pool
 -spec stop(PoolRef :: atom()) ->
         {ok, PoolRef :: atom()} | {error, Reason :: not_found
                                                   | simple_one_for_one}.
 stop(PoolRef) ->
-  case supervisor:terminate_child(?ACCEPTOR_SUP, ?child_id(PoolRef)) of
+  case supervisor:terminate_child(?ACCEPTOR_SUP, ?CHILD_ID(PoolRef)) of
     ok ->
       lager:info("Listener pool '~p' closed", [PoolRef]),
       {ok, PoolRef};
@@ -59,7 +59,7 @@ stop(PoolRef) ->
   end.
 
 %% @doc Restart an existing listener pool if the id `PoolRef' is defined
-%%      in the `courier_acceptor_sup' child spec.
+%% in the `courier_acceptor_sup' child spec.
 -spec restart(PoolRef :: atom()) ->
         {ok, PoolRef :: atom()} | {error, Reason :: running
                                                   | restarting
@@ -67,7 +67,7 @@ stop(PoolRef) ->
                                                   | simple_one_for_one
                                                   | term()}.
 restart(PoolRef) ->
-  case supervisor:restart_child(?ACCEPTOR_SUP, ?child_id(PoolRef)) of
+  case supervisor:restart_child(?ACCEPTOR_SUP, ?CHILD_ID(PoolRef)) of
     {ok, _Child} ->
       lager:info("Listener pool ~p has been restarted", [PoolRef]),
       {ok, PoolRef};

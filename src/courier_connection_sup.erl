@@ -35,7 +35,8 @@ get_spec() ->
     type     => supervisor,
     modules  => [?MODULE]}.
 
--spec create_connection(Socket :: inet:socket()) -> supervisor:startchild_ret().
+-spec create_connection(Socket :: inet:socket()) ->
+        supervisor:startchild_ret().
 create_connection(Socket) ->
   supervisor:start_child(?MODULE, [Socket]).
 

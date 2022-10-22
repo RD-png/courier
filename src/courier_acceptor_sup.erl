@@ -25,6 +25,7 @@
 start_link() ->
   supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
+%% @doc Return child spec for the module
 -spec get_spec() -> supervisor:child_spec().
 get_spec() ->
   #{id       => ?MODULE,

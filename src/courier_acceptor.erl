@@ -30,6 +30,9 @@ start_link(ListenSocket) ->
 init(ListenSocket) ->
   accept(ListenSocket).
 
+%% @doc Create a child spec for the module, multiple instances of this
+%% module will be spawned, so `Id' is used to create a unique child id. The
+%% spawned child will listen for connections on the socket `ListenSocket'.
 -spec get_spec(Id :: id(), ListenSocket :: inet:socket()) ->
         supervisor:child_spec().
 get_spec(Id, ListenSocket) ->
@@ -48,9 +51,9 @@ accept(ListenSocket) ->
   case gen_tcp:accept(ListenSocket) of
     {ok, Socket} ->
       lager:info("courier: accepted connection on: ~p", [Socket]),
-      {ok, ConnectionPid} = courier_connection_sup:create_connection(Socket),
-      ok = gen_tcp:controlling_process(Socket, ConnectionPid),
-      ConnectionPid ! connected,
+      {ok, ConnPid} = courier_connection_sup:create_connection(Socket),
+      ok = gen_tcp:controlling_process(Socket, ConnPid),
+      ConnPid ! connected,
       accept(ListenSocket);
     {error, Reason} ->
       lager:debug("courier: acceptor failed with reason: ~p", [Reason]),

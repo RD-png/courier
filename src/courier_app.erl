@@ -29,8 +29,8 @@ start(_StartType, _StartArgs) ->
 stop(_State) ->
   ok.
 
-%% @doc Return value bound to `Key' in app environemnt, `Key' is expected
-%% to be set, so we will throw an error otherwise.
+%% @doc Return value bound to `Key' in app environemnt, `Key' is expected to
+%% be set, so we will throw an error otherwise.
 -spec get_env(Key :: term()) -> Value :: term() | no_return().
 get_env(Key) when is_atom(Key) ->
   case application:get_env(Key) of
@@ -40,8 +40,9 @@ get_env(Key) when is_atom(Key) ->
       throw({env_missing_key, Key})
   end.
 
-%% @doc Return value bound to `Key' in app environemnt, `Key' maybe not
-%% be set so return the passed `Default' otherwise.
--spec get_env_or_default(Key :: term(), Default :: term()) -> Value :: term().
+%% @doc Return value bound to `Key' in app environemnt, `Key' maybe not be
+%% set so return the passed `Default' otherwise.
+-spec get_env_or_default(Key :: term(), Default :: term()) ->
+        Value :: term().
 get_env_or_default(Key, Default) ->
   application:get_env(?APP, Key, Default).

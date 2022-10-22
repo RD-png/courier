@@ -18,17 +18,22 @@
 %% Supervisor callbacks
 -export([init/1]).
 
--define(pool_sup_name(Ref), list_to_atom(atom_to_list(Ref) ++ "_pool")).
+-define(POOL_SUP_NAME(Ref), list_to_atom(atom_to_list(Ref) ++ "_pool")).
 
 %%%-------------------------------------------------------------------
 %% API
 %%%-------------------------------------------------------------------
 
 start_link(PoolRef, ListenOpts) ->
-  supervisor:start_link({local, ?pool_sup_name(PoolRef)},
+  supervisor:start_link({local, ?POOL_SUP_NAME(PoolRef)},
                         ?MODULE,
                         [PoolRef, ListenOpts]).
 
+%% @doc Create a child spec for the module, multiple instances of this
+%% module will be spawned, so `PoolRef' is used to create a unique child id
+%% and used to uniquely register the child. `ListenOpts' contains config
+%% options for tcp and config options for `courier_acceptor' children of
+%% this module.
 -spec get_spec(PoolRef :: atom(), ListenOpts :: courier:listen_opts()) ->
         supervisor:child_spec().
 get_spec(PoolRef, ListenOpts) ->

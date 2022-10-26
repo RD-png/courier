@@ -46,8 +46,7 @@ start(PoolRef) ->
 
 %% @doc Start a new acceptor pool.
 -spec start(PoolRef :: atom(), ListenOpts :: listen_opts()) ->
-        supervisor:startchild_ret() |
-        {error, invalid_opts}.
+        supervisor:startchild_ret() | {error, invalid_opts}.
 start(PoolRef, ListenOpts) when is_map(ListenOpts) ->
   Port = maps:get(port, ListenOpts),
   PoolSpec = courier_acceptor_pool_sup:get_spec(PoolRef, ListenOpts),

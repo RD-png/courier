@@ -24,28 +24,30 @@
 -type listen_opts() :: #{port          => port(),
                          num_listeners => pos_integer()}.
 
--type start_pool_ret() :: supervisor:startchild_ret()
-                        | {error, invalid_pool_spec}
-                        | {error, pools_missing}
-                        | {error, invalid_opts}.
+-type start_pool_ret() ::
+        supervisor:startchild_ret()
+      | {error, pools_missing}
+      | {error, {undefined_pool_spec, Pool :: atom()}}
+      | {error, {invalid_opts, {Pool :: atom(), InvalidOpts :: term()}}}.
 
 %%%-------------------------------------------------------------------
 %%% API
 %%%-------------------------------------------------------------------
 
-%% TODO
+%% @doc Start all acceptor pools defined in the application environment.
 -spec start_all() -> start_pool_ret().
 start_all() ->
-  do_start([]).
+  start_env_defined_pool(all).
 
 %% @doc Start acceptor pool defined in application env.
 -spec start(PoolRef :: atom()) -> start_pool_ret().
 start(PoolRef) ->
-  do_start([PoolRef]).
+  start_env_defined_pool([PoolRef]).
 
 %% @doc Start a new acceptor pool.
 -spec start(PoolRef :: atom(), ListenOpts :: listen_opts()) ->
-        supervisor:startchild_ret() | {error, invalid_opts}.
+        supervisor:startchild_ret() |
+        {error, invalid_opts}.
 start(PoolRef, ListenOpts) when is_map(ListenOpts) ->
   Port = maps:get(port, ListenOpts),
   PoolSpec = courier_acceptor_pool_sup:get_spec(PoolRef, ListenOpts),
@@ -59,14 +61,13 @@ start(PoolRef, ListenOpts) when is_map(ListenOpts) ->
  ~p, with error: ~p", [Port, Reason]),
       Err
   end;
-start(_PoolRef, _InvalidOpts) ->
-  {error, invalid_opts}.
-
+start(PoolRef, InvalidOpts) ->
+  throw({error, {invalid_opts, {PoolRef, InvalidOpts}}}).
 
 %% @doc Stop an existing acceptor pool.
 -spec stop(PoolRef :: atom()) ->
-        {ok, PoolRef :: atom()} | {error, Reason :: not_found
-                                                  | simple_one_for_one}.
+        {ok, PoolRef :: atom()} |
+        {error, Reason :: not_found | simple_one_for_one}.
 stop(PoolRef) ->
   case supervisor:terminate_child(?ACCEPTOR_SUP, ?CHILD_ID(PoolRef)) of
     ok ->
@@ -81,11 +82,9 @@ stop(PoolRef) ->
 %% @doc Restart an existing acceptor pool if the id `PoolRef' is defined
 %% in the `courier_acceptor_sup' child spec.
 -spec restart(PoolRef :: atom()) ->
-        {ok, PoolRef :: atom()} | {error, Reason :: running
-                                                  | restarting
-                                                  | not_found
-                                                  | simple_one_for_one
-                                                  | term()}.
+        {ok, PoolRef :: atom()} |
+        {error, Reason :: running | restarting | not_found
+                        | simple_one_for_one | term()}.
 restart(PoolRef) ->
   case supervisor:restart_child(?ACCEPTOR_SUP, ?CHILD_ID(PoolRef)) of
     {ok, _Child} ->
@@ -101,21 +100,32 @@ restart(PoolRef) ->
 %%% Internal functions
 %%%-------------------------------------------------------------------
 
-do_start(Pools) ->
+start_env_defined_pool(Pools) ->
   case application:get_env(courier, pools) of
     {ok, EnvPools} ->
-      do_start(Pools, EnvPools);
+      case Pools of
+        all ->
+          start_all_env_defined_pool(EnvPools);
+        Pools ->
+          start_env_defined_pool(Pools, EnvPools)
+      end;
     undefined ->
       {error, pools_missing}
   end.
 
-do_start([], _EnvPools) ->
+start_env_defined_pool([], _EnvPools) ->
   ok;
-do_start([Pool | Pools], EnvPools) ->
+start_env_defined_pool([Pool | Pools], EnvPools) ->
   case proplists:get_value(Pool, EnvPools) of
     undefined ->
-      {error, invalid_pool_spec};
+      {error, {undefined_pool_spec, Pool}};
     ListenOpts ->
       start(Pool, ListenOpts),
-      do_start(Pools, EnvPools)
+      start_env_defined_pool(Pools, EnvPools)
   end.
+
+start_all_env_defined_pool(EnvPools) ->
+  lists:foreach(
+    fun({Pool, ListenOpts}) ->
+        start(Pool, ListenOpts)
+    end, EnvPools).

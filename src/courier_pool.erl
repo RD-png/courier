@@ -20,8 +20,8 @@
 
 -define(CHILD_ID(PoolRef), {courier_acceptor_pool_sup, PoolRef}).
 
--type listen_opts() :: #{port          => port(),
-                         num_listeners => pos_integer()}.
+-type listen_opts() :: #{port      => port(),
+                         acceptors => pos_integer()}.
 -export_type([listen_opts/0]).
 
 %%%-------------------------------------------------------------------
@@ -52,8 +52,7 @@ start(PoolRef) when is_atom(PoolRef) ->
 -spec start(PoolRef :: atom(), ListenOpts :: listen_opts()) ->
         supervisor:startchild_ret() |
         {error, {invalid_opts, {Pool :: atom(), InvalidOpts :: term()}}}.
-start(PoolRef, ListenOpts) when is_map(ListenOpts) ->
-  Port = maps:get(port, ListenOpts),
+start(PoolRef, #{port := Port} = ListenOpts) ->
   PoolSpec = courier_acceptor_pool_sup:get_spec(PoolRef, ListenOpts),
   case supervisor:start_child(?ACCEPTOR_SUP, PoolSpec) of
     {ok, Child} = Res ->

@@ -53,8 +53,8 @@ test_start_all_SUITE(_Config) ->
   ExpectInvalidOpts = {error, {invalid_opts, {test, []}}},
   ?assertException(throw, ExpectInvalidOpts, courier_pool:start_all()),
 
-  ValidPools = [{test1, #{port => 8080, num_listeners => 5}},
-                {test2, #{port => 8081, num_listeners => 6}}],
+  ValidPools = [{test1, #{port => 8080, acceptors => 5}},
+                {test2, #{port => 8081, acceptors => 6}}],
   application:set_env(courier, pools, ValidPools),
   ?assertEqual(ok, courier_pool:start_all()).
 
@@ -63,7 +63,7 @@ test_start_SUITE(_Config) ->
   ?assertEqual(ExpectPoolsMissing, courier_pool:start(test)),
 
   Pool = test3,
-  Pools = [{Pool, #{port => 8083, num_listeners => 5}}],
+  Pools = [{Pool, #{port => 8083, acceptors => 5}}],
   application:set_env(courier, pools, Pools),
 
   ExpectUndefinedPool = {error, {undefined_pool_spec, test4}},

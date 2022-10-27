@@ -48,9 +48,7 @@ get_spec(PoolRef, ListenOpts) ->
 %% Supervisor callbacks
 %%%-------------------------------------------------------------------
 
-init([_PoolRef, ListenOpts]) ->
-  Port         = maps:get(port, ListenOpts),
-  NumListeners = maps:get(num_listeners, ListenOpts),
+init([_PoolRef, #{port := Port, acceptors := NumListeners} = _ListenOpts]) ->
   {ok, ListenSocket} = listen_port(Port),
 
   SupFlags   = #{strategy  => one_for_one,

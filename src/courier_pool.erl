@@ -20,33 +20,38 @@
 
 -define(CHILD_ID(PoolRef), {courier_acceptor_pool_sup, PoolRef}).
 
--export_type([listen_opts/0]).
 -type listen_opts() :: #{port          => port(),
                          num_listeners => pos_integer()}.
-
--type start_pool_ret() ::
-        supervisor:startchild_ret()
-      | {error, pools_missing}
-      | {error, {undefined_pool_spec, Pool :: atom()}}
-      | {error, {invalid_opts, {Pool :: atom(), InvalidOpts :: term()}}}.
+-export_type([listen_opts/0]).
 
 %%%-------------------------------------------------------------------
 %%% API
 %%%-------------------------------------------------------------------
 
 %% @doc Start all acceptor pools defined in the application environment.
--spec start_all() -> start_pool_ret().
+-spec start_all() ->
+        ok |
+        {error, pools_missing} |
+        {error, {invalid_opts, {Pool :: atom(), InvalidOpts :: term()}}}.
 start_all() ->
   start_env_defined_pool(all).
 
-%% @doc Start acceptor pool defined in application env.
--spec start(PoolRef :: atom()) -> start_pool_ret().
-start(PoolRef) ->
+%% REVIEW: Possibly return a [{PoolRef, PoolPid}] for each pool started
+%% @doc Start acceptor pool defined in application environment.
+-spec start([PoolRef :: atom()] | PoolRef :: atom()) ->
+        ok |
+        {error, pools_missing} |
+        {error, {undefined_pool_spec, PoolRef :: atom()}} |
+        {error, {invalid_opts, {PoolRef :: atom(), InvalidOpts :: term()}}}.
+start(PoolRefs) when is_list(PoolRefs) ->
+  start_env_defined_pool(PoolRefs);
+start(PoolRef) when is_atom(PoolRef) ->
   start_env_defined_pool([PoolRef]).
 
 %% @doc Start a new acceptor pool.
 -spec start(PoolRef :: atom(), ListenOpts :: listen_opts()) ->
-        supervisor:startchild_ret() | {error, invalid_opts}.
+        supervisor:startchild_ret() |
+        {error, {invalid_opts, {Pool :: atom(), InvalidOpts :: term()}}}.
 start(PoolRef, ListenOpts) when is_map(ListenOpts) ->
   Port = maps:get(port, ListenOpts),
   PoolSpec = courier_acceptor_pool_sup:get_spec(PoolRef, ListenOpts),

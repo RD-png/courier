@@ -7,6 +7,9 @@ init: get-deps compile init-dialyzer
 compile:
 	${REBAR} compile
 
+ct:
+	${REBAR} ct
+
 dev:
 	ERL_FLAGS=" -args_file config/vm.args " ${REBAR} shell
 

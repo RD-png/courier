@@ -31,9 +31,10 @@ stop(_State) ->
 
 %% @doc Return value bound to `Key' in app environemnt, `Key' is expected to
 %% be set, so we will throw an error otherwise.
--spec get_env(Key :: term()) -> Value :: term() | no_return().
+%% @throws {env_missing_key, Key}
+-spec get_env(Key :: term()) -> Value :: term().
 get_env(Key) when is_atom(Key) ->
-  case application:get_env(Key) of
+  case application:get_env(?APP, Key) of
     {ok, Val} ->
       Val;
     undefined ->

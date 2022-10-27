@@ -20,9 +20,9 @@
 
 -define(CHILD_ID(PoolRef), {courier_acceptor_pool_sup, PoolRef}).
 
--type listen_opts() :: #{port      => port(),
-                         acceptors => pos_integer()}.
--export_type([listen_opts/0]).
+-type pool_opts() :: #{port      => port(),
+                       acceptors => pos_integer()}.
+-export_type([pool_opts/0]).
 
 %%%-------------------------------------------------------------------
 %%% API
@@ -48,10 +48,10 @@ start(PoolRef) when is_atom(PoolRef) ->
 
 %% @doc Start a new acceptor pool.
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
--spec start(PoolRef :: atom(), ListenOpts :: listen_opts()) ->
+-spec start(PoolRef :: atom(), PoolOpts :: pool_opts()) ->
         supervisor:startchild_ret().
-start(PoolRef, #{port := Port} = ListenOpts) ->
-  PoolSpec = courier_acceptor_pool_sup:get_spec(PoolRef, ListenOpts),
+start(PoolRef, #{port := Port} = PoolOpts) ->
+  PoolSpec = courier_acceptor_pool_sup:get_spec(PoolRef, PoolOpts),
   case supervisor:start_child(?ACCEPTOR_SUP, PoolSpec) of
     {ok, Child} = Res ->
       lager:info("Acceptor pool started at '~p', listening on port ~p",
@@ -120,13 +120,13 @@ start_env_defined_pool([Pool | Pools], EnvPools) ->
   case proplists:get_value(Pool, EnvPools) of
     undefined ->
       {error, {undefined_pool_spec, Pool}};
-    ListenOpts ->
-      start(Pool, ListenOpts),
+    PoolOpts ->
+      start(Pool, PoolOpts),
       start_env_defined_pool(Pools, EnvPools)
   end.
 
 start_all_env_defined_pool(EnvPools) ->
   lists:foreach(
-    fun({Pool, ListenOpts}) ->
-        start(Pool, ListenOpts)
+    fun({Pool, PoolOpts}) ->
+        start(Pool, PoolOpts)
     end, EnvPools).

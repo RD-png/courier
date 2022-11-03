@@ -67,8 +67,7 @@ start(PoolRef, InvalidOpts) ->
 
 %% @doc Stop an existing acceptor pool.
 -spec stop(PoolRef :: atom()) ->
-        {ok, PoolRef :: atom()} |
-        {error, Reason :: not_found | simple_one_for_one}.
+        {ok, PoolRef :: atom()} | {error, Reason :: not_found}.
 stop(PoolRef) ->
   case supervisor:terminate_child(?ACCEPTOR_SUP, ?CHILD_ID(PoolRef)) of
     ok ->
@@ -84,8 +83,7 @@ stop(PoolRef) ->
 %% in the `courier_acceptor_sup' child spec.
 -spec restart(PoolRef :: atom()) ->
         {ok, PoolRef :: atom()} |
-        {error, Reason :: running | restarting | not_found
-                        | simple_one_for_one | term()}.
+        {error, Reason :: running | restarting | not_found | term()}.
 restart(PoolRef) ->
   case supervisor:restart_child(?ACCEPTOR_SUP, ?CHILD_ID(PoolRef)) of
     {ok, _Child} ->
@@ -126,7 +124,5 @@ start_env_defined_pool([Pool | Pools], EnvPools) ->
   end.
 
 start_all_env_defined_pool(EnvPools) ->
-  lists:foreach(
-    fun({Pool, PoolOpts}) ->
-        start(Pool, PoolOpts)
-    end, EnvPools).
+  [start(Pool, PoolOpts) || {Pool, PoolOpts} <- EnvPools],
+  ok.

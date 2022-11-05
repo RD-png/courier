@@ -35,7 +35,6 @@
 start_all() ->
   start_env_defined_pool(all).
 
-%% REVIEW: Possibly return a [{PoolRef, PoolPid}] for each pool started
 %% @doc Start acceptor pool defined in application environment.
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
 -spec start([PoolRef :: atom()] | PoolRef :: atom()) ->

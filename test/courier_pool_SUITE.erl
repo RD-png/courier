@@ -81,4 +81,4 @@ test_restart_SUITE(_Config) ->
   %% Attempt to restart a running pool
   ?assertEqual({error, running},   courier_pool:restart(test2)),
   ?assertEqual({error, not_found}, courier_pool:restart(?UNDEFINED_POOL)),
-  ?assertEqual({ok, test3},        courier_pool:restart(?VALIDPOOL)).
+  ?assertEqual({ok, ?VALIDPOOL},   courier_pool:restart(?VALIDPOOL)).

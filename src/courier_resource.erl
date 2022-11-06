@@ -4,13 +4,19 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created :  9 Oct 2022 by Ryan User <ryan@nixos-desktop>
+%%% Created :  6 Nov 2022 by Ryan User <ryan@nixos-desktop>
 %%%-------------------------------------------------------------------
--module(courier).
+-module(courier_resource).
 -author("ryandenby").
 
 %% API
 -export([]).
+
+-type resource()  :: {URI         :: string(),
+                      Handler     :: module(),
+                      HandlerArgs :: [term()]}.
+-type resources() :: [resource()].
+-export_type([resources/0]).
 
 %%%-------------------------------------------------------------------
 %%% API

@@ -21,7 +21,8 @@
 -define(CHILD_ID(PoolRef), {courier_acceptor_pool_sup, PoolRef}).
 
 -type pool_opts() :: #{port      => port(),
-                       acceptors => pos_integer()}.
+                       acceptors => pos_integer(),
+                       resources => courier_resource:resources()}.
 -export_type([pool_opts/0]).
 
 %%%-------------------------------------------------------------------
@@ -30,15 +31,15 @@
 
 %% @doc Start all acceptor pools defined in the application environment.
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
--spec start_all() ->
-        ok | {error, pools_missing}.
+-spec start_all() -> ok | {error, pools_missing}.
 start_all() ->
   start_env_defined_pool(all).
 
 %% @doc Start acceptor pool defined in application environment.
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
 -spec start([PoolRef :: atom()] | PoolRef :: atom()) ->
-        ok | {error, pools_missing} |
+        ok |
+        {error, pools_missing} |
         {error, {undefined_pool_spec, PoolRef :: atom()}}.
 start(PoolRefs) when is_list(PoolRefs) ->
   start_env_defined_pool(PoolRefs);
@@ -58,7 +59,7 @@ start(PoolRef, #{port := Port} = PoolOpts) ->
       Res;
      {error, Reason} = Err ->
       lager:warning("Acceptor pool '~p', failed to start listening on port
- ~p, with error: ~p", [Port, Reason]),
+~p, with error: ~p", [Port, Reason]),
       Err
   end;
 start(PoolRef, InvalidOpts) ->
@@ -78,8 +79,8 @@ stop(PoolRef) ->
       Err
   end.
 
-%% @doc Restart an existing acceptor pool if the id `PoolRef' is defined
-%% in the `courier_acceptor_sup' child spec.
+%% @doc Restart an existing acceptor pool if the id `PoolRef' is defined in
+%% the `courier_acceptor_sup' child spec.
 -spec restart(PoolRef :: atom()) ->
         {ok, PoolRef :: atom()} |
         {error, Reason :: running | restarting | not_found | term()}.

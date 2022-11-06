@@ -29,11 +29,10 @@ start_link(PoolRef, PoolOpts) ->
                         ?MODULE,
                         [PoolRef, PoolOpts]).
 
-%% @doc Create a child spec for the module, multiple instances of this
-%% module will be spawned, so `PoolRef' is used to create a unique child id
-%% and used to uniquely register the child. `PoolOpts' contains config
-%% options for tcp and config options for `courier_acceptor' children of
-%% this module.
+%% @doc Create a child spec for the module, multiple instances of this module
+%% will be spawned, so `PoolRef' is used to create a unique child id and used
+%% to uniquely register the child. `PoolOpts' contains config options for tcp
+%% and config options for `courier_acceptor' children of this module.
 -spec get_spec(PoolRef :: atom(), PoolOpts :: courier_pool:pool_opts()) ->
         supervisor:child_spec().
 get_spec(PoolRef, PoolOpts) ->
@@ -48,13 +47,15 @@ get_spec(PoolRef, PoolOpts) ->
 %% Supervisor callbacks
 %%%-------------------------------------------------------------------
 
-init([_PoolRef, #{port := Port, acceptors := NumAcceptors} = _PoolOpts]) ->
+init([_PoolRef, #{port      := Port,
+                  acceptors := NumAcceptors,
+                  resources := Resources} = _PoolOpts]) ->
   {ok, ListenSocket} = listen_port(Port),
 
   SupFlags   = #{strategy  => one_for_one,
                  intensity => 1,
                  period    => 5},
-  ChildSpecs = [courier_acceptor:get_spec(Id, ListenSocket)
+  ChildSpecs = [courier_acceptor:get_spec(Id, ListenSocket, Resources)
                 || Id <- lists:seq(1, NumAcceptors)],
 
   {ok, {SupFlags, ChildSpecs}}.

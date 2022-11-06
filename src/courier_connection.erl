@@ -15,7 +15,7 @@
 
 -export([init/2]).
 
--define(TIMEOUT, courier_app:get_env_or_default(connection_timeout, 500)).
+-define(TIMEOUT, courier_app:get_env_or_default(connection_timeout, 10000)).
 
 %%%-------------------------------------------------------------------
 %%% API
@@ -62,7 +62,7 @@ handle(Socket, Resources) ->
       inet:setopts(Socket, [{active, once}]),
       gen_tcp:send(Socket, Msg),
       lager:info("recieved ~p, handlers ~p", [Msg, Resources]),
-      ok;
+      handle(Socket, Resources);
     {tcp_closed, Socket} ->
       lager:info("Connection on socket ~p closed, closing connection",
                  [Socket]),

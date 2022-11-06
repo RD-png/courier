@@ -12,7 +12,7 @@
 %% API
 -export([]).
 
--type resource()  :: {URI         :: string(),
+-type resource()  :: {URI         :: binary(),
                       Handler     :: module(),
                       HandlerArgs :: [term()]}.
 -type resources() :: [resource()].

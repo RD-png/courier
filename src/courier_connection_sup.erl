@@ -12,7 +12,7 @@
 %% API
 -export([start_link/0,
          get_spec/0,
-         create_connection/2]).
+         create_connection/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -35,11 +35,10 @@ get_spec() ->
     type     => supervisor,
     modules  => [?MODULE]}.
 
--spec create_connection(Socket    :: inet:socket(),
-                        Resources :: [courier_resource:resource()]) ->
+-spec create_connection(Socket :: inet:socket()) ->
         supervisor:startchild_ret().
-create_connection(Socket, Resources) ->
-  supervisor:start_child(?MODULE, [Socket, Resources]).
+create_connection(Socket) ->
+  supervisor:start_child(?MODULE, [Socket]).
 
 %%%-------------------------------------------------------------------
 %%% Supervisor callbacks

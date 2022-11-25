@@ -10,109 +10,120 @@
 -author("ryandenby").
 
 %% API
--export([register_resource_table/1, delete_resource_table/1]).
+-export([init_resource_table/0 , delete_resource_table/0]).
 
--export([add_resource/2, dispatch/1]).
+-export([fetch_resource/2, fetch_all_resources/1, add_resource/2,
+         add_resources/2]).
 
--type uri_spec() :: {UriPattern :: iodata(),
-                     UriPatternKeys ::{namelist, [binary()]}}.
+-type uri_spec() :: {UriPattern     :: term(),
+                     UriPatternKeys :: [binary()]}.
 
--type resource() :: {UriRef      :: binary(),
+-type resource() :: {UriRef      :: atom(),
                      UriRegex    :: iodata(),
                      Handler     :: module(),
-                     HandlerArgs :: [term()]}.
+                     HandlerArgs :: term()}.
 -export_type([resource/0]).
 
--type resource_spec() :: {UriRef      :: binary(),
+-type resource_spec() :: {{PoolRef :: atom(), UriRef :: atom()},
                           UriSpec     :: uri_spec(),
                           Handler     :: module(),
-                          HandlerArgs :: [term()]}.
+                          HandlerArgs :: term()}.
 
--type uri_vars() :: #{UriPatternKey :: atom => UriVar :: term()}.
-
--define(POOL_RESOURCE_TABLE(Ref),
-        list_to_atom(atom_to_list(Ref) ++ "_resources")).
+-define(TABLE, pool_resources).
 
 %%%-------------------------------------------------------------------
 %%% API
 %%%-------------------------------------------------------------------
 
-%% @doc Register a new resource table for a pool if one is not
-%% already registered.
--spec register_resource_table(PoolRef :: atom()) ->
-        ok | {error, pool_resource_table_already_registered}.
-register_resource_table(PoolRef) when is_atom(PoolRef) ->
-  case
-    is_pool_resource_table_registered(PoolRef) andalso
-    courier_pool:is_pool_active(PoolRef)
-  of
+%% @doc Create an ets table to store the resoruces for acceptor pools.
+-spec init_resource_table() -> ok | table_already_registered.
+init_resource_table() ->
+  case is_pool_resource_table_registered() of
     true ->
-      {error, pool_resource_table_already_registered};
+      table_already_exists;
     false ->
-      ets:new(?POOL_RESOURCE_TABLE(PoolRef), [set, named_table,
-                                              {read_concurrency, true},
-                                              {write_concurrency, true}]),
+      ets:new(?TABLE, [set, public, named_table, {read_concurrency, true},
+                       {write_concurrency, true}]),
       ok
   end.
 
 %% @doc Delete a resource table for a registered pool.
--spec delete_resource_table(PoolRef :: atom()) ->
-        ok | {error, pool_resource_table_not_registered}.
-delete_resource_table(PoolRef) ->
-  case is_pool_resource_table_registered(PoolRef) of
+-spec delete_resource_table() -> ok | table_not_registered.
+delete_resource_table() ->
+  case is_pool_resource_table_registered() of
     true ->
-      ets:delete(?POOL_RESOURCE_TABLE(PoolRef));
+      ets:delete(?TABLE);
     false ->
-      {error, pool_resource_table_not_registered}
+      table_not_registered
   end.
+
+%% REVIEW: Possibly move to the pool module
+-spec fetch_all_resources(PoolRef :: atom()) -> [resource()] | undefined.
+fetch_all_resources(PoolRef) ->
+  case ets:match(?TABLE, {{PoolRef, '_'}, '_', '_', '_'}) of
+    [Resources] ->
+      Resources;
+    [] ->
+      undefined
+  end.
+
+-spec fetch_resource(PoolRef :: atom(), UriRef :: binary()) ->
+        resource() | undefined.
+fetch_resource(PoolRef, UriRef) ->
+  case ets:lookup(?TABLE, {PoolRef, UriRef}) of
+    [Resource] ->
+      Resource;
+    [] ->
+      undefined
+    end.
 
 -spec add_resource(PoolRef :: atom(), Resource :: resource()) ->
-        resource_spec() | {error, Reason :: term()}.
+        ok | {error, invalid_uri_regex | resource_exists}.
 add_resource(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
   case create_uri_spec(UriRegex) of
-    {error, _Reason} = Err->
+    {error, invalid_uri_regex} = Err ->
       Err;
     {_UriPattern, _UriPatternKeys} = UriSpec ->
-      %% Insert into ets or w/e
-      ResourceSpec = {UriRef, UriSpec, Handler, HandlerArgs},
-      ets:insert(?POOL_RESOURCE_TABLE(PoolRef), ResourceSpec),
-      ResourceSpec
+      ResourceSpec = {{PoolRef, UriRef}, UriSpec, Handler, HandlerArgs},
+      try_add_resource(ResourceSpec)
   end.
 
--spec dispatch(UriSpec :: uri_spec()) -> uri_vars().
-dispatch({_UriPattern, _UriPatternKeys} = UriSpec) ->
-  get_uri_variable_map(UriSpec).
+-spec add_resources(PoolRef :: atom(), Resources :: [resource()]) -> ok.
+add_resources(PoolRef, Resources) ->
+  lists:foreach(fun(Resource) ->
+                    ok = add_resource(PoolRef, Resource)
+                end, Resources).
 
 %%%-------------------------------------------------------------------
 %%% Internal functions
 %%%-------------------------------------------------------------------
 
 -spec create_uri_spec(UriRegex :: iodata()) ->
-        uri_spec() | {error, Reason :: string()}.
+        uri_spec() | {error, invalid_uri_regex}.
 create_uri_spec(UriRegex) ->
   case re:compile(UriRegex) of
     {ok, UriPattern} ->
       {namelist, UriPatternKeys} = re:inspect(UriPattern, namelist),
       {UriPattern, UriPatternKeys};
-    {error, _Reason} = Err ->
-      Err
+    {error, _Reason} ->
+      {error, invalid_uri_regex}
   end.
 
--spec get_uri_variable_map(UriSpec :: uri_spec()) -> uri_vars() | {error, nomatch}.
-get_uri_variable_map({UriPattern, UriPatternKeys}) ->
-  case re:run(UriPattern, [global, trim_all]) of
-    {match, UriVars} ->
-      maps:from_list(lists:zip(UriPatternKeys, UriVars));
-    nomatch ->
-      {error, nomatch}
-  end.
-
--spec is_pool_resource_table_registered(PoolRef :: atom()) -> boolean().
-is_pool_resource_table_registered(PoolRef) ->
-  PoolResourceTable = ?POOL_RESOURCE_TABLE(PoolRef),
-  case ets:whereis(PoolResourceTable) of
-    PoolResourceTable ->
-      true;
+-spec is_pool_resource_table_registered() -> boolean().
+is_pool_resource_table_registered() ->
+  case ets:whereis(?TABLE) of
     undefined ->
-      false
+      false;
+    _Tid ->
+      true
+  end.
+
+-spec try_add_resource(ResourceSpec :: resource_spec()) ->
+        ok | {error, resource_exists}.
+try_add_resource(ResourceSpec) ->
+  case ets:insert_new(?TABLE, ResourceSpec) of
+    true ->
+      ok;
+    false ->
+      {error, resource_exists}
   end.

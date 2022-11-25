@@ -31,6 +31,7 @@ start_link() ->
 %%%-------------------------------------------------------------------
 
 init([]) ->
+  courier_resource:init_resource_table(),
   SupFlags   = #{strategy  => one_for_one,
                  intensity => 1,
                  period    => 5},

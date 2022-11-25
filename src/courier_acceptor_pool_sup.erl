@@ -11,14 +11,14 @@
 
 -behaviour(supervisor).
 
+-include("courier_pool.hrl").
+
 %% API
 -export([start_link/2,
          get_spec/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
-
--define(POOL_SUP_NAME(Ref), list_to_atom(atom_to_list(Ref) ++ "_pool")).
 
 %%%-------------------------------------------------------------------
 %% API

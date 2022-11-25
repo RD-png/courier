@@ -22,14 +22,14 @@
 %%%-------------------------------------------------------------------
 
 -spec start_link(ListenSocket :: inet:socket(),
-                 Resources    :: courier_resource:resources()) ->
+                 Resources    :: [courier_resource:resource()]) ->
         {ok, Pid :: pid()}.
 start_link(ListenSocket, Resources) ->
   Pid = spawn_link(?MODULE, init, [ListenSocket, Resources]),
   {ok, Pid}.
 
 -spec init(ListenSocket :: inet:socket(),
-           Resources    :: courier_resource:resources()) -> no_return().
+           Resources    :: [courier_resource:resource()]) -> no_return().
 init(ListenSocket, Resources) ->
   %% REVIEW: Process is not supervised
   Parent = self(),
@@ -40,7 +40,7 @@ init(ListenSocket, Resources) ->
 %% will be spawned, so `Id' is used to create a unique child id. The spawned
 %% child will listen for connections on the socket `ListenSocket'.
 -spec get_spec(Id :: id(), ListenSocket :: inet:socket(),
-               Resources :: courier_resource:resources()) ->
+               Resources :: [courier_resource:resource()]) ->
         supervisor:child_spec().
 get_spec(Id, ListenSocket, Resources) ->
   #{id       => {?MODULE, Id},

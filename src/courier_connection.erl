@@ -22,14 +22,14 @@
 %%%-------------------------------------------------------------------
 
 -spec start_link(Socket    :: inet:socket(),
-                 Resources :: courier_resource:resources()) ->
+                 Resources :: [courier_resource:resource()]) ->
         {ok, Pid :: pid()}.
 start_link(Socket, Resources) ->
   Pid = spawn_link(?MODULE, init, [Socket, Resources]),
   {ok, Pid}.
 
 -spec init(Socket    :: inet:socket(),
-           Resources :: courier_resource:resources()) -> no_return().
+           Resources :: [courier_resource:resource()]) -> no_return().
 init(Socket, Resources) ->
   connect(Socket, Resources).
 

@@ -36,7 +36,7 @@ get_spec() ->
     modules  => [?MODULE]}.
 
 -spec create_connection(Socket    :: inet:socket(),
-                        Resources :: courier_resource:resources()) ->
+                        Resources :: [courier_resource:resource()]) ->
         supervisor:startchild_ret().
 create_connection(Socket, Resources) ->
   supervisor:start_child(?MODULE, [Socket, Resources]).

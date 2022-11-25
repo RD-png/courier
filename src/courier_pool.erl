@@ -9,12 +9,10 @@
 -module(courier_pool).
 -author("ryandenby").
 
+-include("courier_pool.hrl").
+
 %% API
--export([start_all/0,
-         start/1,
-         start/2,
-         stop/1,
-         restart/1]).
+-export([start_all/0, start/1, start/2, stop/1, restart/1, is_pool_active/1]).
 
 -define(ACCEPTOR_SUP, courier_acceptor_sup).
 
@@ -22,7 +20,7 @@
 
 -type pool_opts() :: #{port      => port(),
                        acceptors => pos_integer(),
-                       resources => courier_resource:resources()}.
+                       resources => [courier_resource:resource()]}.
 -export_type([pool_opts/0]).
 
 %%%-------------------------------------------------------------------
@@ -59,7 +57,7 @@ start(PoolRef, #{port := Port} = PoolOpts) ->
       Res;
      {error, Reason} = Err ->
       lager:warning("Acceptor pool '~p', failed to start listening on port
-~p, with error: ~p", [Port, Reason]),
+~p, with error: ~p", [PoolRef, Port, Reason]),
       Err
   end;
 start(PoolRef, InvalidOpts) ->
@@ -93,6 +91,16 @@ restart(PoolRef) ->
       lager:info("Acceptor pool ~p failed to restart with error: ~p",
                  [PoolRef, Reason]),
       Err
+  end.
+
+%% @doc Check if a pool is active and accepting connections.
+-spec is_pool_active(PoolRef :: atom()) -> boolean().
+is_pool_active(PoolRef) ->
+  case whereis(?POOL_SUP_NAME(PoolRef)) of
+    undefined ->
+      false;
+    _Pid ->
+      true
   end.
 
 %%%-------------------------------------------------------------------

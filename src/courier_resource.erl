@@ -15,6 +15,14 @@
 -export([fetch_resource/2, fetch_all_resources/1, add_resource/2,
          add_resources/2]).
 
+-record resource_spec, {uri     :: atom(),
+                        pool    :: atom(),
+                        spec    :: uri_spec(),
+                        handler :: module(),
+                        args    :: term()}.
+
+-type resource_spec() :: #resource_spec{}.
+
 -type uri_spec() :: {UriPattern     :: term(),
                      UriPatternKeys :: [binary()]}.
 
@@ -23,11 +31,6 @@
                      Handler     :: module(),
                      HandlerArgs :: term()}.
 -export_type([resource/0]).
-
--type resource_spec() :: {{PoolRef :: atom(), UriRef :: atom()},
-                          UriSpec     :: uri_spec(),
-                          Handler     :: module(),
-                          HandlerArgs :: term()}.
 
 -define(TABLE, pool_resources).
 
@@ -60,7 +63,11 @@ delete_resource_table() ->
 %% REVIEW: Possibly move to the pool module
 -spec fetch_all_resources(PoolRef :: atom()) -> [resource()] | undefined.
 fetch_all_resources(PoolRef) ->
-  case ets:match(?TABLE, {{PoolRef, '_'}, '_', '_', '_'}) of
+  %% REVIEW: Testing match specs
+  Matches = ets:select(?TABLE, [{{resource_spec, '_', '$1', '_', '_', '_'},
+                                 [{'=:=', '$1', PoolRef}],
+                                 ['$_']}]),
+  case Matches of
     [Resources] ->
       Resources;
     [] ->
@@ -70,7 +77,13 @@ fetch_all_resources(PoolRef) ->
 -spec fetch_resource(PoolRef :: atom(), UriRef :: binary()) ->
         resource() | undefined.
 fetch_resource(PoolRef, UriRef) ->
-  case ets:lookup(?TABLE, {PoolRef, UriRef}) of
+  %% REVIEW: Testing match specs
+  Matches = ets:select(?TABLE, [{{resource_spec, '$1', '$2', '_', '_', '_'},
+                                 [{'andalso',
+                                   {'=:=', '$1', UriRef},
+                                   {'=:=', '$2', PoolRef}}],
+                                 ['$_']}]),
+  case Matches of
     [Resource] ->
       Resource;
     [] ->
@@ -84,7 +97,11 @@ add_resource(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
     {error, invalid_uri_regex} = Err ->
       Err;
     {_UriPattern, _UriPatternKeys} = UriSpec ->
-      ResourceSpec = {{PoolRef, UriRef}, UriSpec, Handler, HandlerArgs},
+      ResourceSpec = #resource_spec{uri     = UriRef,
+                                    pool    = PoolRef,
+                                    spec    = UriSpec,
+                                    handler = Handler,
+                                    args    = HandlerArgs},
       try_add_resource(ResourceSpec)
   end.
 

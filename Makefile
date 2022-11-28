@@ -2,7 +2,10 @@ REBAR=rebar3
 ERL=erl
 APP=courier
 
-init: get-deps compile dialyzer
+init: get-deps compile
+
+# Verbose
+compile-v: dialyzer compile
 
 compile:
 	${REBAR} compile

@@ -12,8 +12,8 @@
 %% API
 -export([init_resource_table/0 , delete_resource_table/0]).
 
--export([fetch_resource/2, fetch_all_resources/1, add_resource/2,
-         add_resources/2]).
+-export([fetch_resource/1, fetch_all_resources/1, add_resource/2,
+         add_resources/2, update_resource/1, update_resource/2]).
 
 -record resource_spec, {uri     :: atom(),
                         pool    :: atom(),
@@ -34,6 +34,8 @@
 
 -define(TABLE, pool_resources).
 
+-define(is_resource_spec(Arg), element(1, Arg) =:= resource_spec).
+
 %%%-------------------------------------------------------------------
 %%% API
 %%%-------------------------------------------------------------------
@@ -45,8 +47,8 @@ init_resource_table() ->
     true ->
       table_already_exists;
     false ->
-      ets:new(?TABLE, [set, public, named_table, {read_concurrency, true},
-                       {write_concurrency, true}]),
+      ets:new(?TABLE, [set, public, named_table, {keypos, #resource_spec.uri},
+                       {read_concurrency, true}, {write_concurrency, true}]),
       ok
   end.
 
@@ -63,7 +65,6 @@ delete_resource_table() ->
 %% REVIEW: Possibly move to the pool module
 -spec fetch_all_resources(PoolRef :: atom()) -> [resource()] | undefined.
 fetch_all_resources(PoolRef) ->
-  %% REVIEW: Testing match specs
   Matches = ets:select(?TABLE, [{{resource_spec, '_', '$1', '_', '_', '_'},
                                  [{'=:=', '$1', PoolRef}],
                                  ['$_']}]),
@@ -74,16 +75,10 @@ fetch_all_resources(PoolRef) ->
       undefined
   end.
 
--spec fetch_resource(PoolRef :: atom(), UriRef :: binary()) ->
+-spec fetch_resource(UriRef :: binary()) ->
         resource() | undefined.
-fetch_resource(PoolRef, UriRef) ->
-  %% REVIEW: Testing match specs
-  Matches = ets:select(?TABLE, [{{resource_spec, '$1', '$2', '_', '_', '_'},
-                                 [{'andalso',
-                                   {'=:=', '$1', UriRef},
-                                   {'=:=', '$2', PoolRef}}],
-                                 ['$_']}]),
-  case Matches of
+fetch_resource(UriRef) ->
+  case ets:lookup(?TABLE, UriRef) of
     [Resource] ->
       Resource;
     [] ->
@@ -97,12 +92,11 @@ add_resource(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
     {error, invalid_uri_regex} = Err ->
       Err;
     {_UriPattern, _UriPatternKeys} = UriSpec ->
-      ResourceSpec = #resource_spec{uri     = UriRef,
-                                    pool    = PoolRef,
-                                    spec    = UriSpec,
-                                    handler = Handler,
-                                    args    = HandlerArgs},
-      try_add_resource(ResourceSpec)
+      try_add_resource(#resource_spec{uri     = UriRef,
+                                      pool    = PoolRef,
+                                      spec    = UriSpec,
+                                      handler = Handler,
+                                      args    = HandlerArgs})
   end.
 
 -spec add_resources(PoolRef :: atom(), Resources :: [resource()]) -> ok.
@@ -110,6 +104,32 @@ add_resources(PoolRef, Resources) ->
   lists:foreach(fun(Resource) ->
                     ok = add_resource(PoolRef, Resource)
                 end, Resources).
+
+-spec update_resource(UpdatedResource :: resource_spec()) ->
+        true | {error, resource_undefined}.
+update_resource(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
+  case ets:lookup(?TABLE, UpdatedResource#resource_spec.uri) of
+    [_Resource] ->
+      ets:insert(?TABLE, UpdatedResource);
+    [] ->
+      {error, resource_undefined}
+  end.
+
+-spec update_resource(UriRef :: atom(), {Field :: atom(),
+                                         UpdatedValue :: term()}) ->
+        boolean() | {error, resource_undefined | resource_field_invalid}.
+update_resource(UriRef, {Field, UpdatedValue}) when is_atom(Field) ->
+  case ets:lookup(?TABLE, UriRef) of
+    [ResourceSpec] ->
+      case update_resource_spec_field(Field, UpdatedValue, ResourceSpec) of
+        {error, resource_field_invalid} = Err ->
+          Err;
+        UpdatedResourceSpec ->
+          ets:insert(?TABLE, UpdatedResourceSpec)
+      end;
+    [] ->
+      {error, resource_undefined}
+  end.
 
 %%%-------------------------------------------------------------------
 %%% Internal functions
@@ -144,3 +164,14 @@ try_add_resource(ResourceSpec) ->
     false ->
       {error, resource_exists}
   end.
+
+update_resource_spec_field(pool,    Value, #resource_spec{} = RS) ->
+  RS#resource_spec{pool = Value};
+update_resource_spec_field(spec,    Value, #resource_spec{} = RS) ->
+  RS#resource_spec{spec = Value};
+update_resource_spec_field(handler, Value, #resource_spec{} = RS) ->
+  RS#resource_spec{handler = Value};
+update_resource_spec_field(args,    Value, #resource_spec{} = RS) ->
+  RS#resource_spec{args = Value};
+update_resource_spec_field(_, _, _) ->
+  {error, resource_field_invalid}.

@@ -75,7 +75,7 @@ fetch_all_resources(PoolRef) ->
       undefined
   end.
 
--spec fetch_resource(UriRef :: binary()) ->
+-spec fetch_resource(UriRef :: atom()) ->
         resource() | undefined.
 fetch_resource(UriRef) ->
   case ets:lookup(?TABLE, UriRef) of

@@ -5,7 +5,7 @@ APP=courier
 init: get-deps compile
 
 # Verbose
-compile-v: dialyzer compile
+compile-v: dialyzer xref compile
 
 compile:
 	${REBAR} compile
@@ -18,6 +18,9 @@ dev:
 
 dialyzer:
 	${REBAR} dialyzer
+
+xref:
+	${REBAR} xref
 
 get-deps:
 	${REBAR} get-deps

@@ -13,7 +13,8 @@
 -export([init_resource_table/0 , delete_resource_table/0]).
 
 -export([fetch_resource/1, fetch_all_resources/1, add_resource/2,
-         add_resources/2, update_resource/1, update_resource/2]).
+         add_resources/2, delete_resource/1, update_resource/1,
+         update_resource/2]).
 
 -record resource_spec, {uri     :: atom(),
                         pool    :: atom(),
@@ -22,18 +23,15 @@
                         args    :: term()}.
 
 -type resource_spec() :: #resource_spec{}.
-
--type uri_spec() :: {UriPattern     :: term(),
-                     UriPatternKeys :: [binary()]}.
-
+-type uri_spec() :: {UriPattern     :: term(), UriPatternKeys :: [binary()]}.
 -type resource() :: {UriRef      :: atom(),
                      UriRegex    :: iodata(),
                      Handler     :: module(),
                      HandlerArgs :: term()}.
 -export_type([resource/0]).
 
--define(TABLE, pool_resources).
 
+-define(TABLE, pool_resources).
 -define(is_resource_spec(Arg), element(1, Arg) =:= resource_spec).
 
 %%%-------------------------------------------------------------------
@@ -63,26 +61,27 @@ delete_resource_table() ->
   end.
 
 %% REVIEW: Possibly move to the pool module
--spec fetch_all_resources(PoolRef :: atom()) -> [resource()] | undefined.
+-spec fetch_all_resources(PoolRef :: atom()) ->
+        [resource()] | {error, resource_undefined}.
 fetch_all_resources(PoolRef) ->
   Matches = ets:select(?TABLE, [{{resource_spec, '_', '$1', '_', '_', '_'},
                                  [{'=:=', '$1', PoolRef}],
                                  ['$_']}]),
   case Matches of
-    [Resources] ->
-      Resources;
     [] ->
-      undefined
+      {error, resource_undefined};
+    Resources ->
+      Resources
   end.
 
 -spec fetch_resource(UriRef :: atom()) ->
-        resource() | undefined.
+        resource() | {error, resource_undefined}.
 fetch_resource(UriRef) ->
   case ets:lookup(?TABLE, UriRef) of
     [Resource] ->
       Resource;
     [] ->
-      undefined
+      {error, resource_undefined}
     end.
 
 -spec add_resource(PoolRef :: atom(), Resource :: resource()) ->
@@ -104,6 +103,16 @@ add_resources(PoolRef, Resources) ->
   lists:foreach(fun(Resource) ->
                     ok = add_resource(PoolRef, Resource)
                 end, Resources).
+
+-spec delete_resource(UriRef :: atom()) -> ok | {error, resource_undefined}.
+delete_resource(UriRef) ->
+  case ets:lookup(?TABLE, UriRef) of
+    [_Resource] ->
+      ets:delete(?TABLE, UriRef),
+      ok;
+    [] ->
+      {error, resource_undefined}
+  end.
 
 -spec update_resource(UpdatedResource :: resource_spec()) ->
         true | {error, resource_undefined}.

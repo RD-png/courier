@@ -50,7 +50,7 @@ get_spec(PoolRef, PoolOpts) ->
 init([PoolRef, #{port      := Port,
                   acceptors := NumAcceptors,
                   resources := Resources} = _PoolOpts]) ->
-  courier_resource:add_resources(PoolRef, Resources),
+  courier_resource:new(PoolRef, Resources),
   {ok, ListenSocket} = listen_port(Port),
 
   SupFlags   = #{strategy  => one_for_one,

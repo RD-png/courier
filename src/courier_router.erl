@@ -22,7 +22,7 @@
 
 -spec dispatch_uri(PoolRef :: atom(), Uri :: string()) -> ok | http_error().
 dispatch_uri(PoolRef, Uri) ->
-  Resources = courier_resource:fetch_all_resources(PoolRef),
+  Resources = courier_resource:pool_fetch_all_resources(PoolRef),
   case resource_match_uri(Resources, Uri) of
     {error, missing_uri_resource} ->
       http_error(404);

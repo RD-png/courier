@@ -12,9 +12,8 @@
 %% API
 -export([init_resource_table/0 , delete_resource_table/0]).
 
--export([fetch_resource/1, fetch_all_resources/1, add_resource/2,
-         add_resources/2, delete_resource/1, update_resource/1,
-         update_resource/2]).
+-export([fetch/1, pool_fetch_all_resources/1, new/2, new_multi/2, delete/1,
+         update/1, update/3]).
 
 -record resource_spec, {uri     :: atom(),
                         pool    :: atom(),
@@ -60,10 +59,10 @@ delete_resource_table() ->
       table_not_registered
   end.
 
-%% REVIEW: Possibly move to the pool module
--spec fetch_all_resources(PoolRef :: atom()) ->
+%% @doc Fetch a list of all resources for `PoolRef'
+-spec pool_fetch_all_resources(PoolRef :: atom()) ->
         [resource()] | {error, resource_undefined}.
-fetch_all_resources(PoolRef) ->
+pool_fetch_all_resources(PoolRef) ->
   Matches = ets:select(?TABLE, [{{resource_spec, '_', '$1', '_', '_', '_'},
                                  [{'=:=', '$1', PoolRef}],
                                  ['$_']}]),
@@ -74,9 +73,10 @@ fetch_all_resources(PoolRef) ->
       Resources
   end.
 
--spec fetch_resource(UriRef :: atom()) ->
+%% @doc Fetch a single resource for a given `UriRef'
+-spec fetch(UriRef :: atom()) ->
         resource() | {error, resource_undefined}.
-fetch_resource(UriRef) ->
+fetch(UriRef) ->
   case ets:lookup(?TABLE, UriRef) of
     [Resource] ->
       Resource;
@@ -84,9 +84,10 @@ fetch_resource(UriRef) ->
       {error, resource_undefined}
     end.
 
--spec add_resource(PoolRef :: atom(), Resource :: resource()) ->
+%% @doc Insert a new `Resource' for `PoolRef'
+-spec new(PoolRef :: atom(), Resource :: resource()) ->
         ok | {error, invalid_uri_regex | resource_exists}.
-add_resource(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
+new(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
   case create_uri_spec(UriRegex) of
     {error, invalid_uri_regex} = Err ->
       Err;
@@ -98,14 +99,17 @@ add_resource(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
                                       args    = HandlerArgs})
   end.
 
--spec add_resources(PoolRef :: atom(), Resources :: [resource()]) -> ok.
-add_resources(PoolRef, Resources) ->
+
+%% @doc Insert multiple new `Resources' for `PoolRef'
+-spec new_multi(PoolRef :: atom(), Resources :: [resource()]) -> ok.
+new_multi(PoolRef, Resources) when is_list(Resources)->
   lists:foreach(fun(Resource) ->
-                    ok = add_resource(PoolRef, Resource)
+                    ok = new(PoolRef, Resource)
                 end, Resources).
 
--spec delete_resource(UriRef :: atom()) -> ok | {error, resource_undefined}.
-delete_resource(UriRef) ->
+%% @doc Delete a resource for a pool given its unique identifier `UriRef'
+-spec delete(UriRef :: atom()) -> ok | {error, resource_undefined}.
+delete(UriRef) ->
   case ets:lookup(?TABLE, UriRef) of
     [_Resource] ->
       ets:delete(?TABLE, UriRef),
@@ -114,9 +118,10 @@ delete_resource(UriRef) ->
       {error, resource_undefined}
   end.
 
--spec update_resource(UpdatedResource :: resource_spec()) ->
+%% @doc Update an entire resource with `UpdatedResource'
+-spec update(UpdatedResource :: resource_spec()) ->
         true | {error, resource_undefined}.
-update_resource(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
+update(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
   case ets:lookup(?TABLE, UpdatedResource#resource_spec.uri) of
     [_Resource] ->
       ets:insert(?TABLE, UpdatedResource);
@@ -124,10 +129,12 @@ update_resource(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
       {error, resource_undefined}
   end.
 
--spec update_resource(UriRef :: atom(), {Field :: atom(),
-                                         UpdatedValue :: term()}) ->
+%% @doc Update a `Field' value with the `UpdatedValue' for a given
+%% unique identifier `UriRef'
+-spec update(UriRef :: atom(), Field :: atom(),
+                      UpdatedValue :: term()) ->
         boolean() | {error, resource_undefined | resource_field_invalid}.
-update_resource(UriRef, {Field, UpdatedValue}) when is_atom(Field) ->
+update(UriRef, Field, UpdatedValue) when is_atom(Field) ->
   case ets:lookup(?TABLE, UriRef) of
     [ResourceSpec] ->
       case update_resource_spec_field(Field, UpdatedValue, ResourceSpec) of

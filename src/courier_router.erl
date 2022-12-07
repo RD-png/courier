@@ -24,6 +24,7 @@
 dispatch_req(PoolRef, Req) ->
   Resources = courier_resource:pool_fetch_all_resources(PoolRef),
   ReqUri = get_req_uri(Req),
+  lager:info("URI TEST ~p", [ReqUri]),
   case resource_match_uri(Resources, ReqUri) of
     {error, missing_uri_resource} ->
       http_error(404);
@@ -77,13 +78,9 @@ get_uri_var_map(UriPatternKeys, UriVars) ->
   maps:from_list(lists:zip(UriPatternKeys, UriVars)).
 
 get_req_uri(Req) ->
-  parse_req_uri(Req, "").
-
-parse_req_uri(<<$\r, $\n, _Rest/binary>>, Segment) ->
-  [_Method, Uri, _HTTPVer] = string:split(lists:reverse(Segment), " ", all),
-  Uri;
-parse_req_uri(<<Part, Rest/binary>>, Segment) ->
-  parse_req_uri(Rest, [Part | Segment]).
+  [UriSegment, _Rest] = binary:split(Req, <<"\r\n">>),
+  [_Method, Uri, _HTTPVer] = binary:split(UriSegment, <<" ">>, [global]),
+  binary_to_list(Uri).
 
 http_error(500) -> "500 Internal server error";
 http_error(404) -> "404 Not Found".

@@ -47,16 +47,16 @@ get_spec(PoolRef, PoolOpts) ->
 %% Supervisor callbacks
 %%%-------------------------------------------------------------------
 
-init([PoolRef, #{port      := Port,
+init([PoolRef, #{port       := Port,
                   acceptors := NumAcceptors,
                   resources := Resources} = _PoolOpts]) ->
-  courier_resource:new(PoolRef, Resources),
-  {ok, ListenSocket} = listen_port(Port),
+  courier_resource:new_multi(PoolRef, Resources),
+  {ok, ListenSocket} = listen_on_port(Port),
 
   SupFlags   = #{strategy  => one_for_one,
                  intensity => 1,
                  period    => 5},
-  ChildSpecs = [courier_acceptor:get_spec(Id, ListenSocket)
+  ChildSpecs = [courier_acceptor:get_spec(Id, ListenSocket, PoolRef)
                 || Id <- lists:seq(1, NumAcceptors)],
 
   {ok, {SupFlags, ChildSpecs}}.
@@ -65,5 +65,5 @@ init([PoolRef, #{port      := Port,
 %% Internal functions
 %%%-------------------------------------------------------------------
 
-listen_port(Port) ->
-  gen_tcp:listen(0, [{port, Port}]).
+listen_on_port(Port) ->
+  gen_tcp:listen(0, [{port, Port}, {mode, binary}]).

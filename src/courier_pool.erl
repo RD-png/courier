@@ -27,7 +27,8 @@
 %%% API
 %%%-------------------------------------------------------------------
 
-%% @doc Start all acceptor pools defined in the application environment.
+%% @doc Start all acceptor pools defined in the application environment,
+%% pools that have already been started will be skipped.
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
 -spec start_all() -> ok | {error, pools_missing}.
 start_all() ->
@@ -36,8 +37,7 @@ start_all() ->
 %% @doc Start acceptor pool defined in application environment.
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
 -spec start([PoolRef :: atom()] | PoolRef :: atom()) ->
-        ok |
-        {error, pools_missing} |
+        ok | {error, pools_missing} |
         {error, {undefined_pool_spec, PoolRef :: atom()}}.
 start(PoolRefs) when is_list(PoolRefs) ->
   start_env_defined_pool(PoolRefs);

@@ -22,7 +22,7 @@
                         args    :: term()}.
 
 -type resource_spec() :: #resource_spec{}.
--type uri_spec() :: {UriPattern     :: term(), UriPatternKeys :: [binary()]}.
+-type uri_spec() :: {UriPattern :: term(), UriPatternKeys :: [binary()]}.
 -type resource() :: {UriRef      :: atom(),
                      UriRegex    :: iodata(),
                      Handler     :: module(),
@@ -30,7 +30,7 @@
 -export_type([resource/0]).
 
 
--define(TABLE, pool_resources).
+-define(RESOURCE_ETS, pool_resources).
 -define(is_resource_spec(Arg), element(1, Arg) =:= resource_spec).
 
 %%%-------------------------------------------------------------------
@@ -44,7 +44,7 @@ init_resource_table() ->
     true ->
       table_already_exists;
     false ->
-      ets:new(?TABLE, [set, public, named_table, {keypos, #resource_spec.uri},
+      ets:new(?RESOURCE_ETS, [set, public, named_table, {keypos, #resource_spec.uri},
                        {read_concurrency, true}, {write_concurrency, true}]),
       ok
   end.
@@ -54,7 +54,7 @@ init_resource_table() ->
 delete_resource_table() ->
   case is_pool_resource_table_registered() of
     true ->
-      ets:delete(?TABLE);
+      ets:delete(?RESOURCE_ETS);
     false ->
       table_not_registered
   end.
@@ -63,7 +63,9 @@ delete_resource_table() ->
 -spec pool_fetch_all_resources(PoolRef :: atom()) ->
         [resource()] | {error, resource_undefined}.
 pool_fetch_all_resources(PoolRef) ->
-  Matches = ets:select(?TABLE, [{{resource_spec, '_', '$1', '_', '_', '_'},
+  %% REVIEW: This is not ideal, if additional fields are added to the record
+  %% definition, this match spec will also need to be updated.
+  Matches = ets:select(?RESOURCE_ETS, [{{resource_spec, '_', '$1', '_', '_', '_'},
                                  [{'=:=', '$1', PoolRef}],
                                  ['$_']}]),
   case Matches of
@@ -77,7 +79,7 @@ pool_fetch_all_resources(PoolRef) ->
 -spec fetch(UriRef :: atom()) ->
         resource() | {error, resource_undefined}.
 fetch(UriRef) ->
-  case ets:lookup(?TABLE, UriRef) of
+  case ets:lookup(?RESOURCE_ETS, UriRef) of
     [Resource] ->
       Resource;
     [] ->
@@ -110,9 +112,9 @@ new_multi(PoolRef, Resources) when is_list(Resources)->
 %% @doc Delete a resource for a pool given its unique identifier `UriRef'
 -spec delete(UriRef :: atom()) -> ok | {error, resource_undefined}.
 delete(UriRef) ->
-  case ets:lookup(?TABLE, UriRef) of
+  case ets:lookup(?RESOURCE_ETS, UriRef) of
     [_Resource] ->
-      ets:delete(?TABLE, UriRef),
+      ets:delete(?RESOURCE_ETS, UriRef),
       ok;
     [] ->
       {error, resource_undefined}
@@ -122,9 +124,9 @@ delete(UriRef) ->
 -spec update(UpdatedResource :: resource_spec()) ->
         true | {error, resource_undefined}.
 update(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
-  case ets:lookup(?TABLE, UpdatedResource#resource_spec.uri) of
+  case ets:lookup(?RESOURCE_ETS, UpdatedResource#resource_spec.uri) of
     [_Resource] ->
-      ets:insert(?TABLE, UpdatedResource);
+      ets:insert(?RESOURCE_ETS, UpdatedResource);
     [] ->
       {error, resource_undefined}
   end.
@@ -135,13 +137,13 @@ update(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
                       UpdatedValue :: term()) ->
         boolean() | {error, resource_undefined | resource_field_invalid}.
 update(UriRef, Field, UpdatedValue) when is_atom(Field) ->
-  case ets:lookup(?TABLE, UriRef) of
+  case ets:lookup(?RESOURCE_ETS, UriRef) of
     [ResourceSpec] ->
       case update_resource_spec_field(Field, UpdatedValue, ResourceSpec) of
         {error, resource_field_invalid} = Err ->
           Err;
         UpdatedResourceSpec ->
-          ets:insert(?TABLE, UpdatedResourceSpec)
+          ets:insert(?RESOURCE_ETS, UpdatedResourceSpec)
       end;
     [] ->
       {error, resource_undefined}
@@ -164,7 +166,7 @@ create_uri_spec(UriRegex) ->
 
 -spec is_pool_resource_table_registered() -> boolean().
 is_pool_resource_table_registered() ->
-  case ets:whereis(?TABLE) of
+  case ets:whereis(?RESOURCE_ETS) of
     undefined ->
       false;
     _Tid ->
@@ -174,13 +176,15 @@ is_pool_resource_table_registered() ->
 -spec try_add_resource(ResourceSpec :: resource_spec()) ->
         ok | {error, resource_exists}.
 try_add_resource(ResourceSpec) ->
-  case ets:insert_new(?TABLE, ResourceSpec) of
+  case ets:insert_new(?RESOURCE_ETS, ResourceSpec) of
     true ->
       ok;
     false ->
       {error, resource_exists}
   end.
 
+%% REVIEW: This is not ideal, if additional fields are added to the record
+%% definition, we will need to add another header here for the new field.
 update_resource_spec_field(pool,    Value, #resource_spec{} = RS) ->
   RS#resource_spec{pool = Value};
 update_resource_spec_field(spec,    Value, #resource_spec{} = RS) ->

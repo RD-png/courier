@@ -21,17 +21,15 @@
 %%% API
 %%%-------------------------------------------------------------------
 
--spec start_link(Socket    :: inet:socket(),
-                 Resources :: [courier_resource:resource()]) ->
+-spec start_link(Socket :: inet:socket(), PoolRef :: atom()) ->
         {ok, Pid :: pid()}.
-start_link(Socket, Resources) ->
-  Pid = spawn_link(?MODULE, init, [Socket, Resources]),
+start_link(Socket, PoolRef) ->
+  Pid = spawn_link(?MODULE, init, [Socket, PoolRef]),
   {ok, Pid}.
 
--spec init(Socket    :: inet:socket(),
-           Resources :: [courier_resource:resource()]) -> no_return().
-init(Socket, Resources) ->
-  connect(Socket, Resources).
+-spec init(Socket :: inet:socket(), PoolRef :: atom()) -> no_return().
+init(Socket, PoolRef) ->
+  connect(Socket, PoolRef).
 
 -spec get_spec() -> supervisor:child_spec().
 get_spec() ->
@@ -46,23 +44,24 @@ get_spec() ->
 %%% Internal functions
 %%%-------------------------------------------------------------------
 
-connect(Socket, Resources) ->
+connect(Socket, PoolRef) ->
   receive
     connected ->
       inet:setopts(Socket, [{active, once}]),
-      handle(Socket, Resources)
+      handle(Socket, PoolRef)
   after ?TIMEOUT ->
       lager:error("Connection timeout on socket ~p", [Socket]),
       exit({error, timeout})
   end.
 
-handle(Socket, Resources) ->
+handle(Socket, PoolRef) ->
   receive
-    {tcp, Socket, Msg} ->
+    {tcp, Socket, Req} ->
+      lager:info("Pool ~p received request ~p", [PoolRef, Req]),
       inet:setopts(Socket, [{active, once}]),
-      gen_tcp:send(Socket, Msg),
-      lager:info("recieved ~p, handlers ~p", [Msg, Resources]),
-      handle(Socket, Resources);
+      Response = courier_router:dispatch_req(PoolRef, Req),
+      gen_tcp:send(Socket, Response),
+      handle(Socket, PoolRef);
     {tcp_closed, Socket} ->
       lager:info("Connection on socket ~p closed, closing connection",
                  [Socket]),

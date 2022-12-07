@@ -10,7 +10,7 @@
 -author("ryandenby").
 
 %% API
--export([dispatch_uri/2]).
+-export([dispatch_req/2]).
 
 -type uri_var_map() :: #{UriPatternKey :: atom => UriVar :: term()}.
 
@@ -20,10 +20,11 @@
 %%% API
 %%%-------------------------------------------------------------------
 
--spec dispatch_uri(PoolRef :: atom(), Uri :: string()) -> ok | http_error().
-dispatch_uri(PoolRef, Uri) ->
+-spec dispatch_req(PoolRef :: atom(), Req :: binary()) -> ok | http_error().
+dispatch_req(PoolRef, Req) ->
   Resources = courier_resource:pool_fetch_all_resources(PoolRef),
-  case resource_match_uri(Resources, Uri) of
+  ReqUri = get_req_uri(Req),
+  case resource_match_uri(Resources, ReqUri) of
     {error, missing_uri_resource} ->
       http_error(404);
     ResourceMatch ->
@@ -52,6 +53,7 @@ try_dispatch({Handler, UriVarMap, HandlerArgs}) ->
         {Handler :: module(), UriVarMap :: uri_var_map(), HandlerArgs :: term()}
           | {error, missing_uri_resource}.
 resource_match_uri(Resources, Uri) ->
+  %% REVIEW: Matcning against record here is not ideal, change to use map
   ResourceMatchFn =
     fun({_, {UriPattern, UriPatternKeys}, Handler, HandlerArgs}) ->
         case re:run(Uri, UriPattern, [global, trim_all]) of
@@ -73,6 +75,15 @@ resource_match_uri(Resources, Uri) ->
         uri_var_map().
 get_uri_var_map(UriPatternKeys, UriVars) ->
   maps:from_list(lists:zip(UriPatternKeys, UriVars)).
+
+get_req_uri(Req) ->
+  parse_req_uri(Req, "").
+
+parse_req_uri(<<$\r, $\n, _Rest/binary>>, Segment) ->
+  [_Method, Uri, _HTTPVer] = string:split(lists:reverse(Segment), " ", all),
+  Uri;
+parse_req_uri(<<Part, Rest/binary>>, Segment) ->
+  parse_req_uri(Rest, [Part | Segment]).
 
 http_error(500) -> "500 Internal server error";
 http_error(404) -> "404 Not Found".

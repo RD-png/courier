@@ -26,6 +26,7 @@
 -type uri_spec() :: {UriPattern :: term(), UriPatternKeys :: [binary()]}.
 
 -type uri_var_map() :: #{UriPatternKey :: binary() => UriVar :: term()}.
+-export_type([uri_var_map/0]).
 
 -type resource() :: {UriRef      :: atom(),
                      UriRegex    :: iodata(),

@@ -116,7 +116,6 @@ new(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
                                       args    = HandlerArgs})
   end.
 
-
 %% @doc Insert multiple new `Resources' for `PoolRef'
 -spec new_multi(PoolRef, Resources) -> ok when
     PoolRef :: atom(),

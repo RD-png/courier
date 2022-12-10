@@ -178,12 +178,8 @@ do_match(Uri, [#resource_spec{spec = {UriPattern, UriPatternKeys},
               | Rest]) ->
   case re:run(Uri, UriPattern, [notempty, {capture, all_names, binary}]) of
     {match, UriVars} when length(UriVars) == length(UriPatternKeys) ->
-      UriVarMap = get_uri_var_map(UriPatternKeys, UriVars),
-      lager:info("~nMatched~nURIVARMAP ~p~nHandler ~p~nArgs ~p",
-                 [UriVarMap, Handler, HandlerArgs]),
-      {UriVarMap, Handler, HandlerArgs};
+      {get_uri_var_map(UriPatternKeys, UriVars), Handler, HandlerArgs};
     match when length(UriPatternKeys) /= 0 ->
-      lager:info("~nMatched~nHandler ~p~nArgs ~p", [Handler, HandlerArgs]),
       {#{}, Handler, HandlerArgs};
     _NoMatch ->
       do_match(Uri, Rest)

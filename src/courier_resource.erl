@@ -23,7 +23,7 @@
 
 -type resource_spec() :: #resource_spec{}.
 -type uri_spec() :: {UriPattern :: term(), UriPatternKeys :: [binary()]}.
--type uri_var_map() :: #{UriPatternKey :: atom => UriVar :: term()}.
+-type uri_var_map() :: #{UriPatternKey :: binary() => UriVar :: term()}.
 -type resource() :: {UriRef      :: atom(),
                      UriRegex    :: iodata(),
                      Handler     :: module(),

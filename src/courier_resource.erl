@@ -12,7 +12,7 @@
 %% API
 -export([init_resource_table/0 , delete_resource_table/0]).
 
--export([fetch/1, pool_fetch_all_resources/1, new/2, new_multi/2, delete/1,
+-export([fetch/1, match/2, pool_fetch_all_resources/1, new/2, new_multi/2, delete/1,
          update/1, update/3]).
 
 -record resource_spec, {uri     :: atom(),
@@ -23,6 +23,7 @@
 
 -type resource_spec() :: #resource_spec{}.
 -type uri_spec() :: {UriPattern :: term(), UriPatternKeys :: [binary()]}.
+-type uri_var_map() :: #{UriPatternKey :: atom => UriVar :: term()}.
 -type resource() :: {UriRef      :: atom(),
                      UriRegex    :: iodata(),
                      Handler     :: module(),
@@ -38,19 +39,18 @@
 %%%-------------------------------------------------------------------
 
 %% @doc Create an ets table to store the resoruces for acceptor pools.
--spec init_resource_table() -> ok | table_already_registered.
+-spec init_resource_table() -> ets:tid() | table_already_registered.
 init_resource_table() ->
   case is_pool_resource_table_registered() of
     true ->
       table_already_exists;
     false ->
       ets:new(?RESOURCE_ETS, [set, public, named_table, {keypos, #resource_spec.uri},
-                       {read_concurrency, true}, {write_concurrency, true}]),
-      ok
+                       {read_concurrency, true}, {write_concurrency, true}])
   end.
 
 %% @doc Delete a resource table for a registered pool.
--spec delete_resource_table() -> ok | table_not_registered.
+-spec delete_resource_table() -> true | table_not_registered.
 delete_resource_table() ->
   case is_pool_resource_table_registered() of
     true ->
@@ -60,20 +60,11 @@ delete_resource_table() ->
   end.
 
 %% @doc Fetch a list of all resources for `PoolRef'
--spec pool_fetch_all_resources(PoolRef :: atom()) ->
-        [resource()] | {error, resource_undefined}.
+-spec pool_fetch_all_resources(PoolRef :: atom()) -> [resource_spec()].
 pool_fetch_all_resources(PoolRef) ->
-  %% REVIEW: This is not ideal, if additional fields are added to the record
-  %% definition, this match spec will also need to be updated.
-  Matches = ets:select(?RESOURCE_ETS, [{{resource_spec, '_', '$1', '_', '_', '_'},
-                                 [{'=:=', '$1', PoolRef}],
-                                 ['$_']}]),
-  case Matches of
-    [] ->
-      {error, resource_undefined};
-    Resources ->
-      Resources
-  end.
+  ets:select(?RESOURCE_ETS, [{{resource_spec, '_', '$1', '_', '_', '_'},
+                                        [{'=:=', '$1', PoolRef}],
+                                        ['$_']}]).
 
 %% @doc Fetch a single resource for a given `UriRef'
 -spec fetch(UriRef :: atom()) ->
@@ -85,6 +76,13 @@ fetch(UriRef) ->
     [] ->
       {error, resource_undefined}
     end.
+
+-spec match(PoolRef :: atom(), Uri :: iodata()) ->
+        {UriVarMap :: uri_var_map(), Handler :: module(),
+         HandlerArgs :: term()} | nomatch.
+match(PoolRef, Uri) ->
+  Resources = pool_fetch_all_resources(PoolRef),
+  do_match(Uri, Resources).
 
 %% @doc Insert a new `Resource' for `PoolRef'
 -spec new(PoolRef :: atom(), Resource :: resource()) ->
@@ -110,24 +108,19 @@ new_multi(PoolRef, Resources) when is_list(Resources)->
                 end, Resources).
 
 %% @doc Delete a resource for a pool given its unique identifier `UriRef'
--spec delete(UriRef :: atom()) -> ok | {error, resource_undefined}.
+-spec delete(UriRef :: atom()) -> ok.
 delete(UriRef) ->
-  case ets:lookup(?RESOURCE_ETS, UriRef) of
-    [_Resource] ->
-      ets:delete(?RESOURCE_ETS, UriRef),
-      ok;
-    [] ->
-      {error, resource_undefined}
-  end.
+  ets:delete(?RESOURCE_ETS, UriRef),
+  ok.
 
 %% @doc Update an entire resource with `UpdatedResource'
 -spec update(UpdatedResource :: resource_spec()) ->
         true | {error, resource_undefined}.
 update(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
-  case ets:lookup(?RESOURCE_ETS, UpdatedResource#resource_spec.uri) of
-    [_Resource] ->
+  case ets:member(?RESOURCE_ETS, UpdatedResource#resource_spec.uri) of
+    true ->
       ets:insert(?RESOURCE_ETS, UpdatedResource);
-    [] ->
+    false ->
       {error, resource_undefined}
   end.
 
@@ -153,10 +146,8 @@ update(UriRef, Field, UpdatedValue) when is_atom(Field) ->
 %%% Internal functions
 %%%-------------------------------------------------------------------
 
--spec create_uri_spec(UriRegex :: iodata()) ->
-        uri_spec() | {error, invalid_uri_regex}.
 create_uri_spec(UriRegex) ->
-  case re:compile(UriRegex) of
+  case re:compile(UriRegex, []) of
     {ok, UriPattern} ->
       {namelist, UriPatternKeys} = re:inspect(UriPattern, namelist),
       {UriPattern, UriPatternKeys};
@@ -164,7 +155,6 @@ create_uri_spec(UriRegex) ->
       {error, invalid_uri_regex}
   end.
 
--spec is_pool_resource_table_registered() -> boolean().
 is_pool_resource_table_registered() ->
   case ets:whereis(?RESOURCE_ETS) of
     undefined ->
@@ -173,8 +163,6 @@ is_pool_resource_table_registered() ->
       true
   end.
 
--spec try_add_resource(ResourceSpec :: resource_spec()) ->
-        ok | {error, resource_exists}.
 try_add_resource(ResourceSpec) ->
   case ets:insert_new(?RESOURCE_ETS, ResourceSpec) of
     true ->
@@ -183,8 +171,27 @@ try_add_resource(ResourceSpec) ->
       {error, resource_exists}
   end.
 
-%% REVIEW: This is not ideal, if additional fields are added to the record
-%% definition, we will need to add another header here for the new field.
+do_match(_Uri, []) ->
+  nomatch;
+do_match(Uri, [#resource_spec{spec = {UriPattern, UriPatternKeys},
+                              handler = Handler, args = HandlerArgs}
+              | Rest]) ->
+  case re:run(Uri, UriPattern, [notempty, {capture, all_names, binary}]) of
+    {match, UriVars} when length(UriVars) == length(UriPatternKeys) ->
+      UriVarMap = get_uri_var_map(UriPatternKeys, UriVars),
+      lager:info("~nMatched~nURIVARMAP ~p~nHandler ~p~nArgs ~p",
+                 [UriVarMap, Handler, HandlerArgs]),
+      {UriVarMap, Handler, HandlerArgs};
+    match when length(UriPatternKeys) /= 0 ->
+      lager:info("~nMatched~nHandler ~p~nArgs ~p", [Handler, HandlerArgs]),
+      {#{}, Handler, HandlerArgs};
+    _NoMatch ->
+      do_match(Uri, Rest)
+  end.
+
+get_uri_var_map(UriPatternKeys, UriVars) ->
+  maps:from_list(lists:zip(UriPatternKeys, UriVars)).
+
 update_resource_spec_field(pool,    Value, #resource_spec{} = RS) ->
   RS#resource_spec{pool = Value};
 update_resource_spec_field(spec,    Value, #resource_spec{} = RS) ->

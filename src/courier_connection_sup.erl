@@ -1,7 +1,8 @@
 %%%-------------------------------------------------------------------
 %%% @author Ryan User <ryan@nixos-desktop>
 %%% @copyright (C) 2022, Ryan User
-%%% @doc  Supervisor for dynamically spawned `courier_connection' workers.
+%%% @doc  Supervisor for dynamically spawned `courier_connection'
+%%% workers.
 %%% Created :  10 Oct 2022 by Ryan User <ryan@nixos-desktop>
 %%%-------------------------------------------------------------------
 -module(courier_connection_sup).
@@ -35,8 +36,9 @@ get_spec() ->
     type     => supervisor,
     modules  => [?MODULE]}.
 
--spec create_connection(Socket :: inet:socket(), PoolRef :: atom()) ->
-        supervisor:startchild_ret().
+-spec create_connection(Socket, PoolRef) -> supervisor:startchild_ret() when
+    Socket :: inet:socket(),
+    PoolRef :: atom().
 create_connection(Socket, PoolRef) ->
   supervisor:start_child(?MODULE, [Socket, PoolRef]).
 

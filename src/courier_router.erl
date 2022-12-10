@@ -18,7 +18,9 @@
 %%% API
 %%%-------------------------------------------------------------------
 
--spec dispatch_req(PoolRef :: atom(), Req :: binary()) -> ok | http_error().
+-spec dispatch_req(PoolRef, Req) -> ok | http_error() when
+    PoolRef :: atom(),
+    Req :: binary().
 dispatch_req(PoolRef, Req) ->
   ReqUri = get_req_uri(Req),
   lager:info("URI TEST ~p", [ReqUri]),

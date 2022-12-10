@@ -30,15 +30,16 @@
 %% @doc Start all acceptor pools defined in the application environment,
 %% pools that have already been started will be skipped.
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
--spec start_all() -> ok | {error, pools_missing}.
+-spec start_all() -> ok | {error, Reason} when
+    Reason :: pools_missing.
 start_all() ->
   start_env_defined_pool(all).
 
 %% @doc Start acceptor pool defined in application environment.
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
--spec start([PoolRef :: atom()] | PoolRef :: atom()) ->
-        ok | {error, pools_missing} |
-        {error, {undefined_pool_spec, PoolRef :: atom()}}.
+-spec start([PoolRef] | PoolRef) -> ok | {error, Reason} when
+    PoolRef :: atom(),
+    Reason :: pools_missing | {undefined_pool_spec, PoolRef}.
 start(PoolRefs) when is_list(PoolRefs) ->
   start_env_defined_pool(PoolRefs);
 start(PoolRef) when is_atom(PoolRef) ->
@@ -46,8 +47,9 @@ start(PoolRef) when is_atom(PoolRef) ->
 
 %% @doc Start a new acceptor pool.
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
--spec start(PoolRef :: atom(), PoolOpts :: pool_opts()) ->
-        supervisor:startchild_ret().
+-spec start(PoolRef, PoolOpts) -> supervisor:startchild_ret() when
+    PoolRef :: atom(),
+    PoolOpts :: pool_opts().
 start(PoolRef, #{port := Port} = PoolOpts) ->
   PoolSpec = courier_acceptor_pool_sup:get_spec(PoolRef, PoolOpts),
   case supervisor:start_child(?ACCEPTOR_SUP, PoolSpec) of
@@ -64,8 +66,9 @@ start(PoolRef, InvalidOpts) ->
   throw({invalid_opts, {PoolRef, InvalidOpts}}).
 
 %% @doc Stop an existing acceptor pool.
--spec stop(PoolRef :: atom()) ->
-        {ok, PoolRef :: atom()} | {error, Reason :: not_found}.
+-spec stop(PoolRef) -> {ok, PoolRef} | {error, Reason} when
+    PoolRef :: atom(),
+    Reason :: not_found.
 stop(PoolRef) ->
   case supervisor:terminate_child(?ACCEPTOR_SUP, ?CHILD_ID(PoolRef)) of
     ok ->
@@ -79,9 +82,9 @@ stop(PoolRef) ->
 
 %% @doc Restart an existing acceptor pool if the id `PoolRef' is defined in
 %% the `courier_acceptor_sup' child spec.
--spec restart(PoolRef :: atom()) ->
-        {ok, PoolRef :: atom()} |
-        {error, Reason :: running | restarting | not_found | term()}.
+-spec restart(PoolRef) -> {ok, PoolRef} | {error, Reason} when
+    PoolRef :: atom(),
+    Reason :: running | restarting | not_found | term().
 restart(PoolRef) ->
   case supervisor:restart_child(?ACCEPTOR_SUP, ?CHILD_ID(PoolRef)) of
     {ok, _Child} ->
@@ -94,7 +97,8 @@ restart(PoolRef) ->
   end.
 
 %% @doc Check if a pool is active and accepting connections.
--spec is_pool_active(PoolRef :: atom()) -> boolean().
+-spec is_pool_active(PoolRef) -> boolean() when
+    PoolRef :: atom().
 is_pool_active(PoolRef) ->
   case whereis(?POOL_SUP_NAME(PoolRef)) of
     undefined ->

@@ -12,8 +12,8 @@
 %% API
 -export([init_resource_table/0 , delete_resource_table/0]).
 
--export([fetch/1, match/2, pool_fetch_all_resources/1, new/2, new_multi/2, delete/1,
-         update/1, update/3]).
+-export([fetch/1, match/2, pool_fetch_all_resources/1, new/2, new_multi/2,
+         delete/1, update/1, update/3]).
 
 -record resource_spec, {uri     :: atom(),
                         pool    :: atom(),
@@ -22,8 +22,11 @@
                         args    :: term()}.
 
 -type resource_spec() :: #resource_spec{}.
+
 -type uri_spec() :: {UriPattern :: term(), UriPatternKeys :: [binary()]}.
+
 -type uri_var_map() :: #{UriPatternKey :: binary() => UriVar :: term()}.
+
 -type resource() :: {UriRef      :: atom(),
                      UriRegex    :: iodata(),
                      Handler     :: module(),
@@ -32,6 +35,7 @@
 
 
 -define(RESOURCE_ETS, pool_resources).
+
 -define(is_resource_spec(Arg), element(1, Arg) =:= resource_spec).
 
 %%%-------------------------------------------------------------------
@@ -39,14 +43,17 @@
 %%%-------------------------------------------------------------------
 
 %% @doc Create an ets table to store the resoruces for acceptor pools.
--spec init_resource_table() -> ets:tid() | table_already_registered.
+-spec init_resource_table() -> Tid | table_already_registered when
+    Tid :: ets:tid().
 init_resource_table() ->
   case is_pool_resource_table_registered() of
     true ->
       table_already_exists;
     false ->
-      ets:new(?RESOURCE_ETS, [set, public, named_table, {keypos, #resource_spec.uri},
-                       {read_concurrency, true}, {write_concurrency, true}])
+      ets:new(?RESOURCE_ETS, [set, public, named_table,
+                              {keypos, #resource_spec.uri},
+                              {read_concurrency, true},
+                              {write_concurrency, true}])
   end.
 
 %% @doc Delete a resource table for a registered pool.
@@ -60,15 +67,19 @@ delete_resource_table() ->
   end.
 
 %% @doc Fetch a list of all resources for `PoolRef'
--spec pool_fetch_all_resources(PoolRef :: atom()) -> [resource_spec()].
+-spec pool_fetch_all_resources(PoolRef) -> Resources when
+    PoolRef :: atom(),
+    Resources :: [resource_spec()].
 pool_fetch_all_resources(PoolRef) ->
   ets:select(?RESOURCE_ETS, [{{resource_spec, '_', '$1', '_', '_', '_'},
                                         [{'=:=', '$1', PoolRef}],
                                         ['$_']}]).
 
 %% @doc Fetch a single resource for a given `UriRef'
--spec fetch(UriRef :: atom()) ->
-        resource() | {error, resource_undefined}.
+-spec fetch(UriRef) -> Resource | {error, Reason} when
+    UriRef :: atom(),
+    Resource :: resource(),
+    Reason :: resource_undefined.
 fetch(UriRef) ->
   case ets:lookup(?RESOURCE_ETS, UriRef) of
     [Resource] ->
@@ -77,16 +88,22 @@ fetch(UriRef) ->
       {error, resource_undefined}
     end.
 
--spec match(PoolRef :: atom(), Uri :: iodata()) ->
-        {UriVarMap :: uri_var_map(), Handler :: module(),
-         HandlerArgs :: term()} | nomatch.
+-spec match(PoolRef, Uri) -> Match | nomatch when
+    PoolRef :: atom(),
+    Uri :: iodata(),
+    Match :: {UriVarMap, Handler, HandlerArgs},
+    UriVarMap :: uri_var_map(),
+    Handler :: module(),
+    HandlerArgs :: term().
 match(PoolRef, Uri) ->
   Resources = pool_fetch_all_resources(PoolRef),
   do_match(Uri, Resources).
 
 %% @doc Insert a new `Resource' for `PoolRef'
--spec new(PoolRef :: atom(), Resource :: resource()) ->
-        ok | {error, invalid_uri_regex | resource_exists}.
+-spec new(PoolRef, Resource) -> ok | {error, Reason} when
+    PoolRef :: atom(),
+    Resource :: resource(),
+    Reason :: invalid_uri_regex|  resource_exists.
 new(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
   case create_uri_spec(UriRegex) of
     {error, invalid_uri_regex} = Err ->
@@ -101,21 +118,25 @@ new(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
 
 
 %% @doc Insert multiple new `Resources' for `PoolRef'
--spec new_multi(PoolRef :: atom(), Resources :: [resource()]) -> ok.
+-spec new_multi(PoolRef, Resources) -> ok when
+    PoolRef :: atom(),
+    Resources :: [resource()].
 new_multi(PoolRef, Resources) when is_list(Resources)->
   lists:foreach(fun(Resource) ->
                     ok = new(PoolRef, Resource)
                 end, Resources).
 
 %% @doc Delete a resource for a pool given its unique identifier `UriRef'
--spec delete(UriRef :: atom()) -> ok.
+-spec delete(UriRef) -> ok when
+    UriRef :: atom().
 delete(UriRef) ->
   ets:delete(?RESOURCE_ETS, UriRef),
   ok.
 
 %% @doc Update an entire resource with `UpdatedResource'
--spec update(UpdatedResource :: resource_spec()) ->
-        true | {error, resource_undefined}.
+-spec update(UpdatedResource) -> true | {error, Reason} when
+    UpdatedResource :: resource_spec(),
+    Reason :: resource_undefined.
 update(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
   case ets:member(?RESOURCE_ETS, UpdatedResource#resource_spec.uri) of
     true ->
@@ -126,9 +147,11 @@ update(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
 
 %% @doc Update a `Field' value with the `UpdatedValue' for a given
 %% unique identifier `UriRef'
--spec update(UriRef :: atom(), Field :: atom(),
-                      UpdatedValue :: term()) ->
-        boolean() | {error, resource_undefined | resource_field_invalid}.
+-spec update(UriRef, Field, UpdatedValue) -> boolean() | {error, Reason} when
+    UriRef :: atom(),
+    Field :: atom(),
+    UpdatedValue :: term(),
+    Reason :: resource_undefined | resource_field_invalid.
 update(UriRef, Field, UpdatedValue) when is_atom(Field) ->
   case ets:lookup(?RESOURCE_ETS, UriRef) of
     [ResourceSpec] ->

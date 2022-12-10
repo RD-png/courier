@@ -21,13 +21,17 @@
 %%% API
 %%%-------------------------------------------------------------------
 
--spec start_link(Socket :: inet:socket(), PoolRef :: atom()) ->
-        {ok, Pid :: pid()}.
+-spec start_link(Socket, PoolRef) -> {ok, Pid} when
+    Socket :: inet:socket(),
+    PoolRef :: atom(),
+    Pid :: pid().
 start_link(Socket, PoolRef) ->
   Pid = spawn_link(?MODULE, init, [Socket, PoolRef]),
   {ok, Pid}.
 
--spec init(Socket :: inet:socket(), PoolRef :: atom()) -> no_return().
+-spec init(Socket, PoolRef) -> no_return() when
+    Socket :: inet:socket(),
+    PoolRef :: atom().
 init(Socket, PoolRef) ->
   connect(Socket, PoolRef).
 

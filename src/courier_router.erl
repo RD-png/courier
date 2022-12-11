@@ -22,32 +22,17 @@
     PoolRef :: atom(),
     Req :: binary().
 dispatch_req(PoolRef, Req) ->
-  ReqUri = get_req_uri(Req),
+  ReqUri = courier_req:get(uri, Req),
   lager:info("URI TEST ~p", [ReqUri]),
   case courier_resource:match(PoolRef, ReqUri) of
+    {ok, Resource} ->
+      lager:info("Resource match for uri ~p", [Resource]),
+      courier_handler:execute(Req, Resource);
     nomatch ->
-      http_error(404);
-    Resource ->
-      try_dispatch(Resource)
+      lager:info("No resource match for uri ~p", [ReqUri]),
+      courier_res:error(404)
   end.
 
 %%%-------------------------------------------------------------------
 %%% Internal functions
 %%%-------------------------------------------------------------------
-
-try_dispatch({UriVarMap, Handler, HandlerArgs}) ->
-  try
-  Handler:execute(UriVarMap, HandlerArgs)
-  catch
-    error:undef ->
-      lager:error("Missing handler ~p", [Handler]),
-      http_error(500)
-  end.
-
-get_req_uri(Req) ->
-  [UriSegment, _Rest] = binary:split(Req, <<"\r\n">>),
-  [_Method, Uri, _HTTPVer] = binary:split(UriSegment, <<" ">>, [global]),
-  Uri.
-
-http_error(500) -> "500 Internal server error";
-http_error(404) -> "404 Not Found".

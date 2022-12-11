@@ -89,7 +89,7 @@ fetch(UriRef) ->
       {error, resource_undefined}
     end.
 
--spec match(PoolRef, Uri) -> Match | nomatch when
+-spec match(PoolRef, Uri) -> {ok, Match} | nomatch when
     PoolRef :: atom(),
     Uri :: iodata(),
     Match :: {UriVarMap, Handler, HandlerArgs},
@@ -201,9 +201,9 @@ do_match(Uri, [#resource_spec{spec = {UriPattern, UriPatternKeys},
               | Rest]) ->
   case re:run(Uri, UriPattern, [notempty, {capture, all_names, binary}]) of
     {match, UriVars} when length(UriVars) == length(UriPatternKeys) ->
-      {get_uri_var_map(UriPatternKeys, UriVars), Handler, HandlerArgs};
-    match when length(UriPatternKeys) /= 0 ->
-      {#{}, Handler, HandlerArgs};
+      {ok, {get_uri_var_map(UriPatternKeys, UriVars), Handler, HandlerArgs}};
+    match when length(UriPatternKeys) == 0 ->
+      {ok, {#{}, Handler, HandlerArgs}};
     _NoMatch ->
       do_match(Uri, Rest)
   end.

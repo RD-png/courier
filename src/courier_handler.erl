@@ -8,35 +8,27 @@
 %%%-------------------------------------------------------------------
 -module(courier_handler).
 
--type http_response() ::
-        {StatusCode :: pos_integer(),
-         ResponseHeaders :: #{Headers :: binary() => Value :: binary()},
-         ResponseBody :: term()}.
+-export([execute/2]).
+
+-type http_response() :: {ok, binary()}.
 
 %%%-------------------------------------------------------------------
 %% Callbacks
 %%%-------------------------------------------------------------------
 
--callback pre_execute(Req, UriVarMap, HandlerArgs) -> Response when
-    Req :: binary(),
-    UriVarMap :: courier_resource:uri_var_map(),
-    HandlerArgs :: term(),
-    Response :: {Action, {Req, UriVarMap, HandlerArgs}},
-    Action :: ok | stop.
-
--callback execute(Req, UriVarMap, HandlerArgs) -> http_response() when
+-callback handle(Req, UriVarMap, HandlerArgs) -> http_response() when
     Req :: binary(),
     UriVarMap :: courier_resource:uri_var_map(),
     HandlerArgs :: term().
 
--callback post_execute(Req, UriVarMap, HandlerArgs) -> Response when
-    Req :: binary(),
-    UriVarMap :: courier_resource:uri_var_map(),
-    HandlerArgs :: term(),
-    Response :: {ok, {Req, UriVarMap, HandlerArgs}}.
-
--optional_callbacks([pre_execute/3, post_execute/3]).
-
 %%%-------------------------------------------------------------------
 %% API
 %%%-------------------------------------------------------------------
+
+execute(Req, {UriVarMap, Handler, HandlerArgs}) ->
+  try Handler:handle(Req, UriVarMap, HandlerArgs) of
+    {ok, Response} ->
+      courier_res:success(Response)
+    catch Class:Reason:Stacktrace ->
+        erlang:raise(Class, Reason, Stacktrace)
+    end.

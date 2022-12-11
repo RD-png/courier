@@ -1,6 +1,7 @@
 -module(courier_handler_example).
+-behaviour(courier_handler).
 
--export([execute/2]).
+-export([handle/3]).
 
-execute(_UriVarMap, _HandlerArgs) ->
-  "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!".
+handle(_Req, _UriVarMap, _HandlerArgs) ->
+  {ok, <<"HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!">>}.

@@ -11,9 +11,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0,
-         get_spec/0,
-         create_connection/2]).
+-export([start_link/0, get_spec/0, create_connection/2]).
 
 %% Supervisor callbacks
 -export([init/1]).

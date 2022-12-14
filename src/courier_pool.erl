@@ -9,14 +9,14 @@
 -module(courier_pool).
 -author("ryandenby").
 
--include("courier_pool.hrl").
-
 %% API
 -export([start_all/0, start/1, start/2, stop/1, restart/1, is_pool_active/1]).
 
 -define(ACCEPTOR_SUP, courier_acceptor_sup).
 
--define(CHILD_ID(PoolRef), {courier_acceptor_pool_sup, PoolRef}).
+-define(POOL_SUP_NAME(Ref), list_to_atom(atom_to_list(Ref) ++ "_pool")).
+
+-define(CHILD_ID(Ref), {courier_acceptor_pool_sup, ?POOL_SUP_NAME(Ref)}).
 
 -type pool_opts() :: #{port      => port(),
                        acceptors => pos_integer(),
@@ -51,7 +51,8 @@ start(PoolRef) when is_atom(PoolRef) ->
     PoolRef :: atom(),
     PoolOpts :: pool_opts().
 start(PoolRef, #{port := Port} = PoolOpts) ->
-  PoolSpec = courier_acceptor_pool_sup:get_spec(PoolRef, PoolOpts),
+  PoolSpec = courier_acceptor_pool_sup:get_spec(?POOL_SUP_NAME(PoolRef),
+                                                PoolOpts),
   case supervisor:start_child(?ACCEPTOR_SUP, PoolSpec) of
     {ok, Child} = Res ->
       lager:info("Acceptor pool started at '~p', listening on port ~p",

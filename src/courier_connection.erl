@@ -10,8 +10,7 @@
 -author("ryandenby").
 
 %% API
--export([start_link/2,
-         get_spec/0]).
+-export([start_link/2, get_spec/0]).
 
 -export([init/2]).
 

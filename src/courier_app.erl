@@ -12,10 +12,7 @@
 -behaviour(application).
 
 %% API
--export([start/2,
-         stop/1,
-         get_env/1,
-         get_env_or_default/2]).
+-export([start/2, stop/1, get_env/1, get_env_or_default/2]).
 
 -define(APP, courier).
 

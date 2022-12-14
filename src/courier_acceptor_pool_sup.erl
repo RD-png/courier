@@ -11,11 +11,8 @@
 
 -behaviour(supervisor).
 
--include("courier_pool.hrl").
-
 %% API
--export([start_link/2,
-         get_spec/2]).
+-export([start_link/2, get_spec/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -25,9 +22,7 @@
 %%%-------------------------------------------------------------------
 
 start_link(PoolRef, PoolOpts) ->
-  supervisor:start_link({local, ?POOL_SUP_NAME(PoolRef)},
-                        ?MODULE,
-                        [PoolRef, PoolOpts]).
+  supervisor:start_link({local, PoolRef}, ?MODULE, [PoolRef, PoolOpts]).
 
 %% @doc Create a child spec for the module, multiple instances of this module
 %% will be spawned, so `PoolRef' is used to create a unique child id and

@@ -4,7 +4,7 @@
 %%% @doc
 %%% Courier handler behaviour
 %%% @end
-%%% Created :  10 Dec 2022 by Ryan User <ryan@nixos-desktop>
+%%% Created : 10 Dec 2022 by Ryan User <ryan@nixos-desktop>
 %%%-------------------------------------------------------------------
 -module(courier_handler).
 

@@ -20,17 +20,16 @@
 
 -spec dispatch_req(PoolRef, Req) -> ok | http_error() when
     PoolRef :: atom(),
-    Req :: binary().
-dispatch_req(PoolRef, RawReq) ->
-  ReqUri = courier_req:get(uri, RawReq),
-  lager:info("URI TEST ~p", [ReqUri]),
-  case courier_resource:match(PoolRef, ReqUri) of
+    Req     :: binary().
+dispatch_req(PoolRef, Req) ->
+  Uri = courier_req:uri(Req),
+  lager:info("URI TEST ~p", [Uri]),
+  case courier_resource:match(PoolRef, Uri) of
     {ok, Resource} ->
-      Req = courier_req:parse(RawReq),
-      lager:info("Resource match for uri ~p", [Resource]),
-      courier_handler:execute(Req, Resource);
+      lager:debug("Resource match for uri ~p", [Resource]),
+      courier_handler:execute(Uri, Resource);
     nomatch ->
-      lager:info("No resource match for uri ~p", [ReqUri]),
+      lager:debug("No resource match for uri ~p", [Uri]),
       courier_res:error(404)
   end.
 

@@ -4,11 +4,11 @@
 %%% @doc
 %%% Courier HTTP request module
 %%% @end
-%%% Created :  11 Dec 2022 by Ryan User <ryan@nixos-desktop>
+%%% Created : 11 Dec 2022 by Ryan User <ryan@nixos-desktop>
 %%%-------------------------------------------------------------------
 -module(courier_req).
 
--export([parse/1, get/2]).
+-export([parse/1, parse_request_line/1, method/1, uri/1, version/1]).
 
 -type req() :: #{Header :: binary() => Value :: term()}.
 -export_type([req/0]).
@@ -17,20 +17,78 @@
 %% API
 %%%-------------------------------------------------------------------
 
--spec parse(RawReq :: binary()) -> req().
+-spec parse(RawReq) -> Req when
+    RawReq :: binary(),
+    Req :: req().
 parse(RawReq) ->
   ReqList = do_parse(RawReq, []),
   maps:from_list(ReqList).
 
--spec get(Field :: atom(), RawReq :: binary()) -> FieldValue :: term().
-get(uri, RawReq) ->
-  [UriSegment, _Rest] = binary:split(RawReq, <<"\r\n">>),
-  [_Method, Uri, _HTTPVer] = binary:split(UriSegment, <<" ">>, [global]),
-  Uri.
+-spec parse_request_line(RawReq) -> ReqLineMap | Error when
+    RawReq     :: binary(),
+    ReqLineMap :: #{Key :: binary() => Value :: term()},
+    Error      :: {error, request_format}.
+parse_request_line(RawReq) ->
+  case get_request_line(RawReq) of
+    {Method, Uri, HTTPVer} ->
+      #{
+        <<"method">>  => Method,
+        <<"uri">>     => Uri,
+        <<"version">> => HTTPVer
+       };
+     {error, request_format} ->
+      {error, request_format}
+  end.
+
+%% TODO
+%% parse_query_string(RawReq) ->
+%%   RawReq.
+
+%% TODO
+%% parse_body(RawReq) ->
+%%   RawReq.
+
+-spec method(RawReq) -> Value when
+    RawReq :: binary(),
+    Value  :: term().
+method(RawReq) ->
+  get(method, RawReq).
+
+-spec uri(RawReq) -> Value when
+    RawReq :: binary(),
+    Value  :: term().
+uri(RawReq) ->
+  get(uri, RawReq).
+
+-spec version(RawReq) -> Value when
+    RawReq :: binary(),
+    Value  :: term().
+version(RawReq) ->
+  get(version, RawReq).
 
 %%%-------------------------------------------------------------------
 %% Internal functions
 %%%-------------------------------------------------------------------
+
+get_request_line(RawReq) ->
+  [ReqLine, _Headers] = binary:split(RawReq, <<"\r\n">>),
+  case binary:split(ReqLine, <<$ :8>>, [global]) of
+    [_Method, _Uri, _HTTPVer] = ReqLineSegments ->
+      list_to_tuple(ReqLineSegments);
+    _ ->
+      {error, request_format}
+  end.
+
+get(Field, RawReq) ->
+  ReqLine = get_request_line(RawReq),
+  do_get(Field, ReqLine).
+
+do_get(method, RequestLine) ->
+  element(1, RequestLine);
+do_get(uri, RequestLine) ->
+  element(2, RequestLine);
+do_get(version, RequestLine) ->
+  element(2, RequestLine).
 
 do_parse(<<>>, Parsed) ->
   Parsed;

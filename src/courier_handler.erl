@@ -17,8 +17,8 @@
 %%%-------------------------------------------------------------------
 
 -callback handle(Req, UriVarMap, HandlerArgs) -> http_response() when
-    Req :: binary(),
-    UriVarMap :: courier_resource:uri_var_map(),
+    Req         :: binary(),
+    UriVarMap   :: courier_resource:uri_var_map(),
     HandlerArgs :: term().
 
 %%%-------------------------------------------------------------------

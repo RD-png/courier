@@ -35,7 +35,7 @@ get_spec() ->
     modules  => [?MODULE]}.
 
 -spec create_connection(Socket, PoolRef) -> supervisor:startchild_ret() when
-    Socket :: inet:socket(),
+    Socket  :: inet:socket(),
     PoolRef :: atom().
 create_connection(Socket, PoolRef) ->
   supervisor:start_child(?MODULE, [Socket, PoolRef]).

@@ -30,7 +30,7 @@ stop(_State) ->
 %% to be set, so we will throw an error otherwise.
 %% @throws {env_missing_key, Key}
 -spec get_env(Key) -> Value when
-    Key :: term(),
+    Key   :: term(),
     Value :: term().
 get_env(Key) when is_atom(Key) ->
   case application:get_env(?APP, Key) of
@@ -43,8 +43,8 @@ get_env(Key) when is_atom(Key) ->
 %% @doc Return value bound to `Key' in app environemnt, `Key' may not be
 %% set so return the passed `Default' otherwise.
 -spec get_env_or_default(Key, Default) -> Value when
-    Key :: term(),
+    Key     :: term(),
     Default :: term(),
-    Value :: term().
+    Value   :: term().
 get_env_or_default(Key, Default) ->
   application:get_env(?APP, Key, Default).

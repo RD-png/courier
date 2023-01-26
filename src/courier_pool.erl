@@ -39,7 +39,7 @@ start_all() ->
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
 -spec start([PoolRef] | PoolRef) -> ok | {error, Reason} when
     PoolRef :: atom(),
-    Reason :: pools_missing | {undefined_pool_spec, PoolRef}.
+    Reason  :: pools_missing | {undefined_pool_spec, PoolRef}.
 start(PoolRefs) when is_list(PoolRefs) ->
   start_env_defined_pool(PoolRefs);
 start(PoolRef) when is_atom(PoolRef) ->
@@ -48,7 +48,7 @@ start(PoolRef) when is_atom(PoolRef) ->
 %% @doc Start a new acceptor pool.
 %% @throws {invalid_opts, {PoolRef, InvalidOpts}}
 -spec start(PoolRef, PoolOpts) -> supervisor:startchild_ret() when
-    PoolRef :: atom(),
+    PoolRef  :: atom(),
     PoolOpts :: pool_opts().
 start(PoolRef, #{port := Port} = PoolOpts) ->
   PoolSpec = courier_acceptor_pool_sup:get_spec(?POOL_SUP_NAME(PoolRef),
@@ -69,7 +69,7 @@ start(PoolRef, InvalidOpts) ->
 %% @doc Stop an existing acceptor pool.
 -spec stop(PoolRef) -> {ok, PoolRef} | {error, Reason} when
     PoolRef :: atom(),
-    Reason :: not_found.
+    Reason  :: not_found.
 stop(PoolRef) ->
   case supervisor:terminate_child(?ACCEPTOR_SUP, ?CHILD_ID(PoolRef)) of
     ok ->
@@ -85,7 +85,7 @@ stop(PoolRef) ->
 %% the `courier_acceptor_sup' child spec.
 -spec restart(PoolRef) -> {ok, PoolRef} | {error, Reason} when
     PoolRef :: atom(),
-    Reason :: running | restarting | not_found | term().
+    Reason  :: running | restarting | not_found | term().
 restart(PoolRef) ->
   case supervisor:restart_child(?ACCEPTOR_SUP, ?CHILD_ID(PoolRef)) of
     {ok, _Child} ->

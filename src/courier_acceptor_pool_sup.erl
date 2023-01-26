@@ -30,7 +30,7 @@ start_link(PoolRef, PoolOpts) ->
 %% for tcp and config options for `courier_acceptor' children of this
 %% module.
 -spec get_spec(PoolRef, PoolOpts) -> supervisor:child_spec() when
-    PoolRef :: atom(),
+    PoolRef  :: atom(),
     PoolOpts :: courier_pool:pool_opts().
 get_spec(PoolRef, PoolOpts) ->
   #{id       => {?MODULE, PoolRef},

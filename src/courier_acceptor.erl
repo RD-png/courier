@@ -20,15 +20,15 @@
 
 -spec start_link(ListenSocket, PoolRef) -> {ok, Pid} when
     ListenSocket :: inet:socket(),
-    PoolRef :: atom(),
-    Pid :: pid().
+    PoolRef      :: atom(),
+    Pid          :: pid().
 start_link(ListenSocket, PoolRef) ->
   Pid = spawn_link(?MODULE, init, [ListenSocket, PoolRef]),
   {ok, Pid}.
 
 -spec init(ListenSocket, PoolRef) -> no_return() when
     ListenSocket :: inet:socket(),
-    PoolRef :: atom().
+    PoolRef      :: atom().
 init(ListenSocket, PoolRef) ->
   accept(ListenSocket, PoolRef).
 
@@ -36,9 +36,9 @@ init(ListenSocket, PoolRef) ->
 %% module will be spawned, so `Id' is used to create a unique child id. The
 %% spawned child will listen for connections on the socket `ListenSocket'.
 -spec get_spec(Id , ListenSocket, PoolRef) -> supervisor:child_spec() when
-    Id :: pos_integer(),
+    Id           :: pos_integer(),
     ListenSocket :: inet:socket(),
-    PoolRef :: atom().
+    PoolRef      :: atom().
 get_spec(Id, ListenSocket, PoolRef) ->
   #{id       => {?MODULE, Id},
     start    => {?MODULE, start_link, [ListenSocket, PoolRef]},

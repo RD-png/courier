@@ -69,7 +69,7 @@ delete_resource_table() ->
 
 %% @doc Fetch a list of all resources for `PoolRef'
 -spec pool_fetch_all_resources(PoolRef) -> Resources when
-    PoolRef :: atom(),
+    PoolRef   :: atom(),
     Resources :: [resource_spec()].
 pool_fetch_all_resources(PoolRef) ->
   ets:select(?RESOURCE_ETS, [{{resource_spec, '_', '$1', '_', '_', '_'},
@@ -78,9 +78,9 @@ pool_fetch_all_resources(PoolRef) ->
 
 %% @doc Fetch a single resource for a given `UriRef'
 -spec fetch(UriRef) -> Resource | {error, Reason} when
-    UriRef :: atom(),
+    UriRef   :: atom(),
     Resource :: resource(),
-    Reason :: resource_undefined.
+    Reason   :: resource_undefined.
 fetch(UriRef) ->
   case ets:lookup(?RESOURCE_ETS, UriRef) of
     [Resource] ->
@@ -90,11 +90,11 @@ fetch(UriRef) ->
     end.
 
 -spec match(PoolRef, Uri) -> {ok, Match} | nomatch when
-    PoolRef :: atom(),
-    Uri :: iodata(),
-    Match :: {UriVarMap, Handler, HandlerArgs},
-    UriVarMap :: uri_var_map(),
-    Handler :: module(),
+    PoolRef     :: atom(),
+    Uri         :: iodata(),
+    Match       :: {UriVarMap, Handler, HandlerArgs},
+    UriVarMap   :: uri_var_map(),
+    Handler     :: module(),
     HandlerArgs :: term().
 match(PoolRef, Uri) ->
   Resources = pool_fetch_all_resources(PoolRef),
@@ -102,9 +102,9 @@ match(PoolRef, Uri) ->
 
 %% @doc Insert a new `Resource' for `PoolRef'
 -spec new(PoolRef, Resource) -> ok | {error, Reason} when
-    PoolRef :: atom(),
+    PoolRef  :: atom(),
     Resource :: resource(),
-    Reason :: invalid_uri_regex|  resource_exists.
+    Reason   :: invalid_uri_regex | resource_exists.
 new(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
   case create_uri_spec(UriRegex) of
     {error, invalid_uri_regex} = Err ->
@@ -119,7 +119,7 @@ new(PoolRef, {UriRef, UriRegex, Handler, HandlerArgs} = _Resource) ->
 
 %% @doc Insert multiple new `Resources' for `PoolRef'
 -spec new_multi(PoolRef, Resources) -> ok when
-    PoolRef :: atom(),
+    PoolRef   :: atom(),
     Resources :: [resource()].
 new_multi(PoolRef, Resources) when is_list(Resources)->
   lists:foreach(fun(Resource) ->
@@ -136,7 +136,7 @@ delete(UriRef) ->
 %% @doc Update an entire resource with `UpdatedResource'
 -spec update(UpdatedResource) -> true | {error, Reason} when
     UpdatedResource :: resource_spec(),
-    Reason :: resource_undefined.
+    Reason          :: resource_undefined.
 update(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
   case ets:member(?RESOURCE_ETS, UpdatedResource#resource_spec.uri) of
     true ->
@@ -148,10 +148,10 @@ update(UpdatedResource) when ?is_resource_spec(UpdatedResource) ->
 %% @doc Update a `Field' value with the `UpdatedValue' for a given
 %% unique identifier `UriRef'
 -spec update(UriRef, Field, UpdatedValue) -> boolean() | {error, Reason} when
-    UriRef :: atom(),
-    Field :: atom(),
+    UriRef       :: atom(),
+    Field        :: atom(),
     UpdatedValue :: term(),
-    Reason :: resource_undefined | resource_field_invalid.
+    Reason       :: resource_undefined | resource_field_invalid.
 update(UriRef, Field, UpdatedValue) when is_atom(Field) ->
   case ets:lookup(?RESOURCE_ETS, UriRef) of
     [ResourceSpec] ->
